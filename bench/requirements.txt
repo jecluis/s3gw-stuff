@@ -8,3 +8,4 @@ starlette==0.20.4
 tenacity==8.1.0
 typing_extensions==4.4.0
 uvicorn==0.18.3
+PyYAML==6.0

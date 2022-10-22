@@ -1,0 +1,24 @@
+name: "nightly benchmark"
+params:
+  num_objects: 1000
+  object_size: 1mb
+  duration: 5m
+
+targets:
+  minio:
+    image: quay.io/minio/minio:latest
+    args: "server /data --console-address :9001"
+    volumes:
+      - source: /srv/containers/joao/s3gw-bench/minio-data
+        target: /data
+    ports:
+      - source: 9000
+        target: 9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    host: 127.0.0.1:9000
+  s3gw:
+    image: ghcr.io/aquarist-labs/s3gw:latest
+    access_key: test
+    secret_key: test
+    host: 127.0.0.1:7480
