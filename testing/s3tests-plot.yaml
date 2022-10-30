@@ -1,0 +1,25 @@
+filters:
+  atomic:
+    - ".*_atomic_.*"
+  objects:
+    - ".*_object.*"
+  buckets:
+    - ".*_bucket_.*"
+  multipart:
+    - ".*_multipart.*"
+  bucket list:
+    - ".*_bucket_list_.*"
+  bucket list v2:
+    - ".*_bucket_listv2.*"
+  bucket acl:
+    - ".*_bucket_acl.*"
+  bucket create:
+    - ".*_bucket_create.*"
+  bucket policy:
+    - ".*_bucket_policy.*"
+  object acl:
+    - ".*_object_acl.*"
+  object copy:
+    - ".*_object_copy.*"
+  versioning:
+    - ".*_version.*"
