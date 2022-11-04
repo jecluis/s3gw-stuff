@@ -7,13 +7,18 @@
 # your option) any later version.
 
 import asyncio
+import json
 import random
 import re
 import shutil
 import string
+import tempfile
 from enum import Enum
+from pathlib import Path
 from typing import Dict, List, Optional
 
+import pandas
+import zstandard as zstd
 from pydantic import BaseModel
 
 
@@ -64,18 +69,22 @@ class WarpBenchmark:
         self.state = WarpBenchmark.State.NONE
         self.progress = 0.0
 
-    async def run(
-        self, host: str, access_key: str, secret_key: str
-    ) -> WarpResult:
+    async def run(self, host: str, access_key: str, secret_key: str) -> str:
 
         bucketname = "".join(
             random.choice(string.ascii_lowercase) for _ in range(16)
         )
         print(f"run warp on bucket {bucketname}")
+        tmp_benchdata_dir = Path(tempfile.mkdtemp())
+        tmp_benchdata_file = tmp_benchdata_dir.joinpath("warp-result")
         cmd: List[str] = [
             "warp",
             "mixed",
+            "--quiet",
+            "--json",
             "--no-color",
+            "--benchdata",
+            tmp_benchdata_file.as_posix(),
             "--host",
             host,
             "--access-key",
@@ -94,18 +103,48 @@ class WarpBenchmark:
         ]
         print(f"run warp cmd: {cmd}")
         proc = await asyncio.subprocess.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            *cmd,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
         )
+        retcode = await proc.wait()
+        if retcode != 0:
+            raise WarpError()
+
+        result = self.parse_csv(tmp_benchdata_file)
+        for dirent in tmp_benchdata_dir.iterdir():
+            dirent.unlink()
+        tmp_benchdata_dir.rmdir()
+        return result
+
         assert proc.stdout
         assert proc.stderr
         res = await asyncio.gather(self._process_output(proc.stdout))
-        stdout = res[0]
+        stdout: List[str] = res[0]
 
         retcode = await proc.wait()
         if retcode != 0:
             assert proc.stderr is not None
             print((await proc.stderr.read()).decode("utf-8"))
             raise WarpError()
+
+        json_raw_lst: List[str] = []
+        in_json = False
+        for l in stdout:
+            if not in_json:
+                if l.strip() == "{":
+                    in_json = True
+                else:
+                    continue
+            json_raw_lst.append(l)
+
+        json_raw = "".join(json_raw_lst)
+        json_dict = json.loads(json_raw)
+        with Path("./warp-result.json").open("w+") as fd:
+            json.dump(json_dict, fd)
+
+        print(json_dict)
+        raise WarpError()
 
         print("finished warp")
         res = self._parse(stdout)
@@ -119,6 +158,22 @@ class WarpBenchmark:
             delete=res["DELETE"],
             stat=res["STAT"],
         )
+
+    def parse_csv(self, datafile: Path) -> str:
+        zstd_file = datafile.with_suffix(".csv.zst")
+        csv_file = datafile.with_suffix(".csv")
+        assert zstd_file.exists()
+        with zstd_file.open("rb") as source:
+            decomp = zstd.ZstdDecompressor()
+            with csv_file.open("wb") as dest:
+                decomp.copy_stream(source, dest)
+
+        assert csv_file.exists()
+        data = pandas.read_csv(csv_file)  # type: ignore
+        data["duration_ms"] = data.apply(  # type: ignore
+            lambda r: r["duration_ns"] * 1e-6, axis=1  # type: ignore
+        )
+        return data.to_json()  # type: ignore
 
     async def _process_output(self, reader: asyncio.StreamReader) -> List[str]:
         def _handle_progress(line: str) -> bool:
@@ -140,6 +195,12 @@ class WarpBenchmark:
                 return True
             return False
 
+        def _is_warp_output(line: str) -> bool:
+            res = re.match("warp:.*", line)
+            if res is not None:
+                return True
+            return False
+
         lines: List[str] = []
         cur_line: bytearray = bytearray()
         while not reader.at_eof():
@@ -152,6 +213,8 @@ class WarpBenchmark:
                 line = cur_line.decode("utf-8")
                 cur_line = bytearray()
                 if len(line.strip()) == 0:
+                    continue
+                if _is_warp_output(line):
                     continue
                 if _handle_progress(line):
                     continue

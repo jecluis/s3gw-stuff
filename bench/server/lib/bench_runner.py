@@ -13,7 +13,7 @@ import string
 from typing import List, Optional
 
 from lib.bench_config import BenchmarkParams, BenchmarkTarget
-from lib.warp import WarpBenchmark, WarpResult
+from lib.warp.warp import WarpBenchmark
 from libstuff import podman
 
 
@@ -36,7 +36,7 @@ class BenchmarkRunner:
         self.instance_name = None
         self.target_cid = None
 
-    async def run(self) -> WarpResult:
+    async def run(self) -> str:
         await self._run_target()
         # wait for target to become available
         # this should be a test on the target's address
@@ -76,7 +76,7 @@ class BenchmarkRunner:
     async def _stop_target(self) -> None:
         await podman.stop(id=self.target_cid)
 
-    async def _run_warp(self) -> WarpResult:
+    async def _run_warp(self) -> str:
         warp = WarpBenchmark(
             self.params.object_size,
             self.params.num_objects,
