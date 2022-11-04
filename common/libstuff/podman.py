@@ -81,12 +81,14 @@ class PodmanInspectResult(BaseModel):
     id: str
     created_at: dt
     running: bool
+    status: str
     started_at: dt
     finished_at: dt
     image_name: str
 
 
 class _RawPodmanInspectResultState(BaseModel):
+    Status: str
     Running: bool
     StartedAt: dt
     FinishedAt: dt
@@ -254,6 +256,7 @@ async def inspect(id: str) -> PodmanInspectResult:
         id=res.Id,
         created_at=res.Created,
         running=res.State.Running,
+        status=res.State.Status,
         started_at=res.State.StartedAt,
         finished_at=res.State.FinishedAt,
         image_name=res.ImageName,
