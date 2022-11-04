@@ -1,0 +1,40 @@
+container:
+  image: ghcr.io/aquarist-labs/s3gw:latest
+  ports:
+    - 7480:7480
+
+s3tests:
+  include:
+    - ".*\\.test_sse_kms_default_upload_.*"
+  exclude:
+    - ".*8m.*"
+
+plots:
+  filters:
+    atomic:
+      - ".*_atomic_.*"
+    objects:
+      - ".*_object.*"
+    buckets:
+      - ".*_bucket_.*"
+    multipart:
+      - ".*_multipart.*"
+    bucket list:
+      - ".*_bucket_list_.*"
+    bucket list v2:
+      - ".*_bucket_listv2.*"
+    bucket acl:
+      - ".*_bucket_acl.*"
+    bucket create:
+      - ".*_bucket_create.*"
+    bucket policy:
+      - ".*_bucket_policy.*"
+    object acl:
+      - ".*_object_acl.*"
+    object copy:
+      - ".*_object_copy.*"
+    versioning:
+      - ".*_version.*"
+
+  output_path: ./s3tests-results/
+  output_format: png
