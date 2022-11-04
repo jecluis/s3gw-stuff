@@ -12,9 +12,9 @@ import random
 import string
 from typing import List, Optional
 
-from lib import podman
 from lib.bench_config import BenchmarkParams, BenchmarkTarget
 from lib.warp import WarpBenchmark, WarpResult
+from libstuff import podman
 
 
 class BenchmarkRunner:
