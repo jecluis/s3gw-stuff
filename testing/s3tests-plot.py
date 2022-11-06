@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Tuple
 import click
 import pandas
 import yaml
-from lib import plots
+from libstuff.s3tests import plots
 
 
 async def _parse_log(logfile: Path) -> str:
@@ -36,7 +36,9 @@ async def _parse_log(logfile: Path) -> str:
             if m is None:
                 continue
             assert len(m.groups()) == 2
-            tests.append((m.group(1), m.group(2).lower()))
+            unit: str = m.group(1)
+            unit_res: str = m.group(2)
+            tests.append((unit, unit_res.lower()))
 
     res_lst: List[str] = [f"{unit}\t{res}" for unit, res in tests]
     return "\n".join(res_lst)
