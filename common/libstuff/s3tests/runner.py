@@ -91,6 +91,7 @@ class S3TestsRunner:
                 cconf.image,
                 ports=cconf.ports,
                 volumes=cconf.volumes,
+                pull_if_newer=True,
             )
         except podman.PodmanError:
             raise RunnerError(
