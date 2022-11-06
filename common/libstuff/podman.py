@@ -282,3 +282,8 @@ async def stop(*, id: Optional[str] = None, name: Optional[str] = None) -> None:
     retcode = await proc.wait()
     if retcode != 0:
         raise PodmanError()
+
+
+async def is_running(id: str) -> bool:
+    res = await inspect(id)
+    return res.running
