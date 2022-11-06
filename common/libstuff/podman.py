@@ -186,6 +186,7 @@ async def run(
     replace: bool = False,
     ports: List[str] = [],
     volumes: List[str] = [],
+    pull_if_newer: bool = False,
 ) -> str:
 
     # we do not support running attached.
@@ -205,15 +206,12 @@ async def run(
             name_cmd.append("--replace")
 
     args_cmd: List[str] = args if args is not None else []
+    base_cmd = ["podman", "run", "-d"]
 
-    cmd = (
-        ["podman", "run", "-d"]
-        + volumes_cmd
-        + ports_cmd
-        + name_cmd
-        + [image]
-        + args_cmd
-    )
+    if pull_if_newer:
+        base_cmd.append("--pull=newer")
+
+    cmd = base_cmd + volumes_cmd + ports_cmd + name_cmd + [image] + args_cmd
 
     proc = await asyncio.subprocess.create_subprocess_exec(
         *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
