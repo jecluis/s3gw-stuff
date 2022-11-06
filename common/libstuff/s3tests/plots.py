@@ -15,6 +15,13 @@ from typing import Any, Dict, List, Optional
 import pandas
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from pydantic import BaseModel, Field
+
+
+class PlotsConfig(BaseModel):
+    filters: Dict[str, List[str]] = Field({})
+    output_path: Path = Field(Path("."))
+    output_format: str = Field("png")
 
 
 def plot_s3test_results(

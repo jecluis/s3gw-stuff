@@ -19,7 +19,6 @@ from libstuff import git
 from libstuff.s3tests import plots
 from libstuff.s3tests.runner import (
     ContainerConfig,
-    PlotsConfig,
     S3TestsConfig,
     S3TestsRunner,
 )
@@ -38,7 +37,7 @@ def clone_s3tests(dest: Path) -> bool:
 
 
 def plot(
-    name: str, results: List[Tuple[str, str]], plotsconf: PlotsConfig
+    name: str, results: List[Tuple[str, str]], plotsconf: plots.PlotsConfig
 ) -> None:
     import pandas
 
@@ -66,10 +65,10 @@ async def main(
     config: ContainerConfig,
     s3testsconf: S3TestsConfig,
     s3tests: Path,
-    plotsconf: PlotsConfig,
+    plotsconf: plots.PlotsConfig,
 ) -> None:
 
-    runner = S3TestsRunner(name, suite, s3tests, config, s3testsconf, plotsconf)
+    runner = S3TestsRunner(name, suite, s3tests, config, s3testsconf)
     results: List[Tuple[str, str]] = await runner.run()
     plot(name, results, plotsconf)
 
@@ -105,7 +104,7 @@ def cli(
         sys.exit(1)
 
     s3testsconf = S3TestsConfig(ignore=[], exclude=[], include=[])
-    plotsconf = PlotsConfig(
+    plotsconf = plots.PlotsConfig(
         filters={}, output_path=Path("."), output_format="png"
     )
 
@@ -130,7 +129,7 @@ def cli(
 
             if "plots" in rawconf:
                 try:
-                    plotsconf = PlotsConfig.parse_obj(rawconf["plots"])
+                    plotsconf = plots.PlotsConfig.parse_obj(rawconf["plots"])
                 except ValidationError:
                     click.echo("malformed plots config.")
                     sys.exit(1)

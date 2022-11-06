@@ -8,7 +8,7 @@
 import asyncio
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from libstuff import podman
 from pydantic import BaseModel, Field
@@ -54,19 +54,12 @@ class S3TestsConfig(BaseModel):
     include: List[str] = Field([])
 
 
-class PlotsConfig(BaseModel):
-    filters: Dict[str, List[str]] = Field({})
-    output_path: Path = Field(Path("."))
-    output_format: str = Field("png")
-
-
 class S3TestsRunner:
     name: str
     suite: str
     s3testspath: Path
     containerconf: ContainerConfig
     s3testsconf: S3TestsConfig
-    plotsconf: PlotsConfig
 
     cid: Optional[str]
     s3tests_proc: Optional[asyncio.subprocess.Process]
@@ -80,14 +73,12 @@ class S3TestsRunner:
         s3tests: Path,
         containerconf: ContainerConfig,
         s3testsconf: S3TestsConfig,
-        plotsconf: PlotsConfig,
     ) -> None:
         self.name = name
         self.suite = suite
         self.s3testspath = s3tests
         self.containerconf = containerconf
         self.s3testsconf = s3testsconf
-        self.plotsconf = plotsconf
 
         self.cid = None
         self.s3tests_proc = None
