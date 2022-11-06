@@ -13,6 +13,16 @@ from typing import Dict, List, Optional, Tuple
 from libstuff import podman
 from pydantic import BaseModel, Field
 
+_HELPER_FILE = "run-s3tests-helper.sh"
+
+
+def _get_helper_path() -> Path:
+    p = Path(__file__).resolve().parent
+    helper = p.joinpath(_HELPER_FILE)
+    assert helper.exists()
+    assert helper.is_file()
+    return helper
+
 
 class S3TestsError(Exception):
     pass
@@ -140,7 +150,7 @@ class S3TestsRunner:
     async def _run_s3tests(self) -> List[Tuple[str, str]]:
         base_cmd = [
             "bash",
-            "./run-s3tests-helper.sh",
+            _get_helper_path().as_posix(),
             "--host",
             "127.0.0.1",
             "--port",
