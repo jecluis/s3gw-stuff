@@ -49,6 +49,7 @@ class ContainerConfig(BaseModel):
 
 
 class TestsConfig(BaseModel):
+    suite: str = Field("s3tests_boto3.functional")
     ignore: List[str] = Field([])
     exclude: List[str] = Field([])
     include: List[str] = Field([])

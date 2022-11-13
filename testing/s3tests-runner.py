@@ -100,6 +100,7 @@ def cli(
         sys.exit(1)
 
     s3testsconf = TestsConfig(
+        suite="s3tests_boto3.functional.test_s3",
         ignore=[],
         exclude=[],
         include=[],
