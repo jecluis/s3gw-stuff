@@ -17,11 +17,7 @@ import click
 import yaml
 from libstuff import git
 from libstuff.s3tests import plots
-from libstuff.s3tests.runner import (
-    ContainerConfig,
-    S3TestsConfig,
-    S3TestsRunner,
-)
+from libstuff.s3tests.runner import ContainerConfig, S3TestsRunner, TestsConfig
 from pydantic import ValidationError
 
 
@@ -63,7 +59,7 @@ async def main(
     suite: str,
     name: str,
     config: ContainerConfig,
-    s3testsconf: S3TestsConfig,
+    s3testsconf: TestsConfig,
     s3tests: Path,
     plotsconf: plots.PlotsConfig,
 ) -> None:
@@ -103,7 +99,11 @@ def cli(
         click.echo("config path is not a file.")
         sys.exit(1)
 
-    s3testsconf = S3TestsConfig(ignore=[], exclude=[], include=[])
+    s3testsconf = TestsConfig(
+        ignore=[],
+        exclude=[],
+        include=[],
+    )
     plotsconf = plots.PlotsConfig(
         filters={}, output_path=Path("."), output_format="png"
     )
@@ -120,9 +120,9 @@ def cli(
                 click.echo("malformed container config.")
                 sys.exit(1)
 
-            if "s3tests" in rawconf:
+            if "tests" in rawconf:
                 try:
-                    s3testsconf = S3TestsConfig.parse_obj(rawconf["s3tests"])
+                    s3testsconf = TestsConfig.parse_obj(rawconf["tests"])
                 except ValidationError:
                     click.echo("malformed s3tests config.")
                     sys.exit(1)

@@ -48,7 +48,7 @@ class ContainerConfig(BaseModel):
     volumes: List[str] = Field([])
 
 
-class S3TestsConfig(BaseModel):
+class TestsConfig(BaseModel):
     ignore: List[str] = Field([])
     exclude: List[str] = Field([])
     include: List[str] = Field([])
@@ -59,7 +59,7 @@ class S3TestsRunner:
     suite: str
     s3testspath: Path
     containerconf: ContainerConfig
-    s3testsconf: S3TestsConfig
+    s3testsconf: TestsConfig
 
     cid: Optional[str]
     s3tests_proc: Optional[asyncio.subprocess.Process]
@@ -72,7 +72,7 @@ class S3TestsRunner:
         suite: str,
         s3tests: Path,
         containerconf: ContainerConfig,
-        s3testsconf: S3TestsConfig,
+        s3testsconf: TestsConfig,
     ) -> None:
         self.name = name
         self.suite = suite
