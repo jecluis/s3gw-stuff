@@ -6,6 +6,7 @@
 # your option) any later version.
 
 import asyncio
+import logging
 import re
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple
@@ -64,6 +65,8 @@ class S3TestsRunner:
     containerconf: ContainerConfig
     s3testsconf: TestsConfig
 
+    logger: logging.Logger
+
     cid: Optional[str]
     s3tests_proc: Optional[asyncio.subprocess.Process]
     s3tests_done: bool
@@ -76,6 +79,7 @@ class S3TestsRunner:
         s3tests: Path,
         containerconf: ContainerConfig,
         s3testsconf: TestsConfig,
+        logger: logging.Logger = logging.getLogger(),
     ) -> None:
         self.name = name
         self.suite = suite
@@ -87,6 +91,8 @@ class S3TestsRunner:
         self.s3tests_proc = None
         self.s3tests_done = False
         self.s3tests_killed = False
+
+        self.logger = logger
 
     async def run(
         self, progress_cb: Optional[ProgressCB] = None
@@ -108,11 +114,12 @@ class S3TestsRunner:
             self._run_s3tests(progress_cb), self._monitor_container()
         )
         if not success:
-            print("container died while running the tests!")
+            self.logger.error("container died while running the tests!")
 
         try:
             await podman.stop(id=self.cid)
         except podman.PodmanError:
+            self.logger.error(f"unable to stop container '{self.cid}'.")
             raise RunnerError(f"unable to stop container '{self.cid}'.")
 
         return results
@@ -129,7 +136,7 @@ class S3TestsRunner:
 
             is_running = await podman.is_running(self.cid)
             if not is_running:
-                print("container died!!")
+                self.logger.error("container died!!")
                 assert self.s3tests_proc.stderr is not None
                 assert self.s3tests_proc.stdout is not None
                 self.s3tests_killed = True
@@ -146,6 +153,7 @@ class S3TestsRunner:
     async def _run_s3tests(
         self, progress_cb: Optional[ProgressCB] = None
     ) -> List[Tuple[str, str]]:
+        self.logger.debug("running s3tests")
         base_cmd = [
             "bash",
             _get_helper_path().as_posix(),
@@ -158,6 +166,7 @@ class S3TestsRunner:
             "--suite",
             self.suite,
         ]
+        self.logger.debug(f"base cmd: {base_cmd}")
 
         collect_cmd = base_cmd + ["--collect"]
         collected_tests = await self._s3tests_collect(self.suite, collect_cmd)
@@ -168,17 +177,20 @@ class S3TestsRunner:
             self.s3testsconf.include,
         )
 
-        print(f"collected {len(collected_tests)} tests")
+        self.logger.debug(f"collected {len(collected_tests)} tests")
         nfiltered = len(collected_tests) - len(filtered_tests)
-        print(
+        self.logger.debug(
             f"filtered {nfiltered} tests for a total of {len(filtered_tests)}"
         )
 
         if len(filtered_tests) == 0:
-            print("no tests to run.")
+            self.logger.info("no tests to run.")
             return []
 
-        results = await self._s3tests_run(self.suite, base_cmd, filtered_tests)
+        self.logger.debug(f"running {len(filtered_tests)}")
+        results = await self._s3tests_run(
+            self.suite, base_cmd, filtered_tests, progress_cb
+        )
         self.s3tests_done = True
         return results
 
@@ -211,6 +223,7 @@ class S3TestsRunner:
 
         retcode = await proc.wait()
         if retcode != 0:
+            self.logger.error("error collecting tests.")
             # print((await proc.stderr.read()).decode("utf-8"))
             raise S3TestsError()
 
@@ -247,13 +260,13 @@ class S3TestsRunner:
             return results
 
         tests = collected.copy()
-        print(f"num tests: {len(tests)}")
+        self.logger.debug(f"num tests: {len(tests)}")
         if len(include) > 0:
             tests = _apply_filters(tests, include, exclude=False)
-            print(f"after include: {len(tests)}")
+            self.logger.debug(f"after include: {len(tests)}")
         if len(exclude) > 0:
             tests = _apply_filters(tests, exclude, exclude=True)
-            print(f"after exclude: {len(tests)}")
+            self.logger.debug(f"after exclude: {len(tests)}")
         return tests
 
     async def _s3tests_run(
@@ -288,10 +301,10 @@ class S3TestsRunner:
                 assert test.startswith("test_")
                 results.append((test, res.lower()))
                 progress = len(results) * 100 / len(tests)
-                print(f"progress: {progress}%")
+                self.logger.debug(f"progress: {progress}%")
                 _progress_cb(len(results))
 
-            print("finished")
+            self.logger.debug("finished capturing results.")
 
         cmd = base_cmd + tests
         self.s3tests_proc = await asyncio.create_subprocess_exec(
