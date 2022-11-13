@@ -8,13 +8,14 @@
 import asyncio
 from datetime import datetime as dt
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 from uuid import UUID, uuid4
 
 from controllers.s3tests.config import S3TestsConfig
 from fastapi.logger import logger
 from libstuff import git
 from common.error import ServerError
+from libstuff.dbm import DBM
 from libstuff.s3tests.runner import S3TestsRunner, S3TestsError
 from pydantic import BaseModel
 
@@ -110,21 +111,30 @@ class S3TestsMgr:
     _is_shutting_down: bool
 
     _config: S3TestsConfig
+    _db: DBM
 
     _work_item: Optional[WorkItem]
     _results: Dict[UUID, S3TestRunResult]
 
-    def __init__(self, config: S3TestsConfig) -> None:
+    def __init__(self, config: S3TestsConfig, db: DBM) -> None:
         self._lock = asyncio.Lock()
         self._task = None
         self._is_shutting_down = False
         self._config = config
+        self._db = db
         self._work_item = None
         self._results = {}
 
     async def start(self) -> None:
         if self._task is not None:
             return
+
+        db_entries = cast(
+            Dict[str, S3TestRunResult],
+            await self._db.entries(ns="s3tests", model=S3TestRunResult),
+        )
+        for k, v in db_entries.items():
+            self._results[UUID(k)] = v
 
         self._task = asyncio.create_task(self._tick())
         pass
@@ -141,6 +151,7 @@ class S3TestsMgr:
                 uuid = self._work_item.uuid
                 if self._work_item.is_done():
                     res = self._work_item.results
+                    await self._db.put(ns="s3tests", key=str(uuid), value=res)
                     self._results[uuid] = res
                     self._work_item = None
                 else:

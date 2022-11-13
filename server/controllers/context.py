@@ -5,6 +5,9 @@
 # the Free Software Foundation, either version 3 of the License, or (at
 # your option) any later version.
 
+from pathlib import Path
+
+from libstuff.dbm import DBM
 from controllers.config import ServerConfig
 from controllers.s3tests.mgr import S3TestsMgr
 
@@ -13,11 +16,13 @@ class ServerContext:
 
     _s3tests: S3TestsMgr
     _config: ServerConfig
+    _db: DBM
 
     def __init__(self, config: ServerConfig) -> None:
         self._config = config
-        self._s3tests = S3TestsMgr(self._config.s3tests)
-        pass
+        _dbpath = Path("./server.db").resolve()
+        self._db = DBM(_dbpath)
+        self._s3tests = S3TestsMgr(self._config.s3tests, self._db)
 
     async def start(self) -> None:
         await self._s3tests.start()
