@@ -8,12 +8,14 @@
 import asyncio
 import re
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from libstuff import podman
 from pydantic import BaseModel, Field
 
 _HELPER_FILE = "run-s3tests-helper.sh"
+
+ProgressCB = Callable[[int, int], None]
 
 
 def _get_helper_path() -> Path:
@@ -86,7 +88,9 @@ class S3TestsRunner:
         self.s3tests_done = False
         self.s3tests_killed = False
 
-    async def run(self) -> List[Tuple[str, str]]:
+    async def run(
+        self, progress_cb: Optional[ProgressCB] = None
+    ) -> List[Tuple[str, str]]:
         cconf = self.containerconf
         try:
             self.cid = await podman.run(
@@ -101,7 +105,7 @@ class S3TestsRunner:
             )
 
         results, success = await asyncio.gather(
-            self._run_s3tests(), self._monitor_container()
+            self._run_s3tests(progress_cb), self._monitor_container()
         )
         if not success:
             print("container died while running the tests!")
@@ -139,7 +143,9 @@ class S3TestsRunner:
 
         return success
 
-    async def _run_s3tests(self) -> List[Tuple[str, str]]:
+    async def _run_s3tests(
+        self, progress_cb: Optional[ProgressCB] = None
+    ) -> List[Tuple[str, str]]:
         base_cmd = [
             "bash",
             _get_helper_path().as_posix(),
@@ -251,9 +257,18 @@ class S3TestsRunner:
         return tests
 
     async def _s3tests_run(
-        self, suite: str, base_cmd: List[str], tests: List[str]
+        self,
+        suite: str,
+        base_cmd: List[str],
+        tests: List[str],
+        progress_cb: Optional[ProgressCB] = None,
     ) -> List[Tuple[str, str]]:
         results: List[Tuple[str, str]] = []
+
+        def _progress_cb(progress: int) -> None:
+            if progress_cb is None:
+                return
+            progress_cb(len(tests), progress)
 
         async def _capture_result(reader: asyncio.StreamReader) -> None:
             regex = re.compile(
@@ -274,6 +289,7 @@ class S3TestsRunner:
                 results.append((test, res.lower()))
                 progress = len(results) * 100 / len(tests)
                 print(f"progress: {progress}%")
+                _progress_cb(len(results))
 
             print("finished")
 
