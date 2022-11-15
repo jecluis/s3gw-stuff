@@ -11,7 +11,6 @@ from pathlib import Path
 
 import yaml
 from common.error import ServerError
-from controllers.s3tests.config import S3TestsConfig
 from pydantic import BaseModel, ValidationError
 
 
@@ -20,7 +19,7 @@ class ServerConfigError(ServerError):
 
 
 class ServerConfig(BaseModel):
-    s3tests: S3TestsConfig
+    pass
 
     @staticmethod
     def parse(conffile: Path) -> ServerConfig:

@@ -15,7 +15,7 @@ from controllers.s3tests.mgr import (
     S3TestRunResult,
     NoSuchConfigError,
 )
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException, status
 from fastapi.logger import logger
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
@@ -62,10 +62,21 @@ async def get_results(
 
 @router.post("/run", response_model=S3TestsRunReply)
 async def run_s3tests(
-    request: Request, mgr: S3TestsMgr = Depends(s3tests_mgr)
+    request: Request,
+    mgr: S3TestsMgr = Depends(s3tests_mgr),
+    name: Optional[str] = None,
+    uuid: Optional[UUID] = None,
 ) -> S3TestsRunReply:
-    uuid = await mgr.run()
-    return S3TestsRunReply(date=dt.now(), uuid=uuid)
+
+    cfg: Optional[S3TestsConfigEntry] = None
+    try:
+        cfg = await mgr.config_get(name=name, uuid=uuid)
+    except NoSuchConfigError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND)
+    assert cfg is not None
+
+    run_uuid = await mgr.run(cfg)
+    return S3TestsRunReply(date=dt.now(), uuid=run_uuid)
 
 
 @router.get("/info", response_model=S3TestsInfoReply)

@@ -12,7 +12,6 @@ from typing import Dict, List, Optional, Tuple, cast
 from uuid import UUID, uuid4
 
 from controllers.s3tests.config import (
-    S3TestsConfig,
     S3TestsConfigDesc,
     S3TestsConfigEntry,
 )
@@ -118,7 +117,6 @@ class S3TestsMgr:
     _task: Optional[asyncio.Task[None]]
     _is_shutting_down: bool
 
-    _config: S3TestsConfig
     _db: DBM
 
     _work_item: Optional[WorkItem]
@@ -127,11 +125,10 @@ class S3TestsMgr:
     NS_UUID = "s3tests-config"
     NS_NAME = "s3tests-config-by-name"
 
-    def __init__(self, config: S3TestsConfig, db: DBM) -> None:
+    def __init__(self, db: DBM) -> None:
         self._lock = asyncio.Lock()
         self._task = None
         self._is_shutting_down = False
-        self._config = config
         self._db = db
         self._work_item = None
         self._results = {}
@@ -180,7 +177,7 @@ class S3TestsMgr:
     def is_running(self) -> bool:
         return not self._is_shutting_down and self._task is not None
 
-    async def run(self) -> UUID:
+    async def run(self, cfg: S3TestsConfigEntry) -> UUID:
         async with self._lock:
             if self._work_item is not None:
                 return self._work_item.uuid
@@ -200,12 +197,13 @@ class S3TestsMgr:
                         f"error cloning repository to {s3testspath}"
                     )
 
+            _config = cfg.desc.config
             runner: S3TestsRunner = S3TestsRunner(
                 run_name,
-                self._config.tests.suite,
+                _config.tests.suite,
                 s3testspath,
-                self._config.container,
-                self._config.tests,
+                _config.container,
+                _config.tests,
                 logger,
             )
             self._work_item = WorkItem(runner)

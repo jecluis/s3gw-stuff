@@ -22,7 +22,7 @@ class ServerContext:
         self._config = config
         _dbpath = Path("./server.db").resolve()
         self._db = DBM(_dbpath)
-        self._s3tests = S3TestsMgr(self._config.s3tests, self._db)
+        self._s3tests = S3TestsMgr(self._db)
 
     async def start(self) -> None:
         await self._s3tests.start()
