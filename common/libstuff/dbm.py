@@ -7,10 +7,12 @@
 
 # pyright: reportUnnecessaryIsInstance=false
 
+from __future__ import annotations
 import asyncio
+from contextlib import asynccontextmanager
 import dbm.gnu as dbm
 from pathlib import Path
-from typing import Dict, Optional, Type, Union
+from typing import Dict, AsyncGenerator, Optional, Type, Union
 
 from pydantic import BaseModel, ValidationError
 
@@ -34,6 +36,36 @@ class DBM:
     _path: Path
     _lock: asyncio.Lock
     _db: "dbm._gdbm"  # type: ignore
+
+    class Transaction:
+        _dbm: DBM
+
+        def __init__(self, dbm: DBM):
+            self._dbm = dbm
+
+        def get(
+            self,
+            *,
+            ns: Optional[str] = None,
+            key: str,
+        ) -> Optional[str]:
+            return self._dbm._get(ns, key)
+
+        def get_model(
+            self, *, ns: Optional[str] = None, key: str, model: Type[BaseModel]
+        ) -> Optional[BaseModel]:
+            return self._dbm._get_model(ns, key, model)
+
+        def put(
+            self,
+            ns: Optional[str],
+            key: str,
+            value: Union[str, bytes, BaseModel],
+        ) -> bool:
+            return self._dbm._put(ns, key, value)
+
+        def exists(self, ns: Optional[str], key: str) -> bool:
+            return self._dbm._exists(ns, key)
 
     def __init__(self, path: Path) -> None:
         self._path = path.resolve()
@@ -68,15 +100,17 @@ class DBM:
         key: str,
         value: Union[str, bytes, BaseModel],
     ) -> bool:
-        _key = self._get_key(ns, key)
         async with self._lock:
-            return self._put(_key, value)
+            return self._put(ns, key, value)
 
-    def _put(self, key: str, value: Union[str, bytes, BaseModel]) -> bool:
+    def _put(
+        self, ns: Optional[str], key: str, value: Union[str, bytes, BaseModel]
+    ) -> bool:
+        _key = self._get_key(ns, key)
         if isinstance(value, str) or isinstance(value, bytes):
-            self._db[key] = value
+            self._db[_key] = value
         elif isinstance(value, BaseModel):
-            self._db[key] = value.json()
+            self._db[_key] = value.json()
         else:
             raise DBMError(f"invalid type on put: {type(value)}")
         return True
@@ -121,12 +155,12 @@ class DBM:
         return content
 
     async def exists(self, *, ns: Optional[str] = None, key: str) -> bool:
-        _key = self._get_key(ns, key)
         async with self._lock:
-            return self._exists(_key)
+            return self._exists(ns, key)
 
-    def _exists(self, key: str) -> bool:
-        return key in self._db
+    def _exists(self, ns: Optional[str], key: str) -> bool:
+        _key = self._get_key(ns, key)
+        return _key in self._db
 
     async def entries(
         self,
@@ -183,3 +217,9 @@ class DBM:
                     results_model[_key_entry] = _value
 
         return results_model  # type: ignore
+
+    @asynccontextmanager
+    async def transaction(self) -> AsyncGenerator[Transaction, None]:
+        async with self._lock:
+            tx = self.Transaction(self)
+            yield tx
