@@ -7,8 +7,9 @@
 
 from datetime import datetime as dt
 from uuid import UUID
-from typing import Dict
+from typing import Dict, List
 
+from controllers.s3tests.config import S3TestsConfigDesc, S3TestsConfigEntry
 from controllers.s3tests.mgr import S3TestsMgr, S3TestRunResult
 from fastapi import Depends, Request
 from fastapi.logger import logger
@@ -20,23 +21,32 @@ from . import s3tests_mgr
 router: APIRouter = APIRouter(prefix="/s3tests", tags=["s3tests"])
 
 
-class S3TestsResultsReply(BaseModel):
+class S3TestsBaseReply(BaseModel):
     date: dt = dt.now()
+
+
+class S3TestsResultsReply(S3TestsBaseReply):
     results: Dict[UUID, S3TestRunResult]
 
 
-class S3TestsRunReply(BaseModel):
-    date: dt
+class S3TestsRunReply(S3TestsBaseReply):
     uuid: UUID
 
 
-class S3TestsInfoReply(BaseModel):
-    date: dt = dt.now()
+class S3TestsInfoReply(S3TestsBaseReply):
+    pass
 
 
-class S3TestsStatusReply(BaseModel):
-    date: dt = dt.now()
+class S3TestsStatusReply(S3TestsBaseReply):
     running: bool
+
+
+class S3TestsConfigPostReply(S3TestsBaseReply):
+    uuid: UUID
+
+
+class S3TestsConfigGetReply(S3TestsBaseReply):
+    config: List[S3TestsConfigEntry]
 
 
 @router.get("/results", response_model=S3TestsResultsReply)
@@ -66,3 +76,21 @@ async def get_s3tests_status(
     mgr: S3TestsMgr = Depends(s3tests_mgr),
 ) -> S3TestsStatusReply:
     return S3TestsStatusReply(running=mgr.is_running())
+
+
+@router.post("/config", response_model=S3TestsConfigPostReply)
+async def post_config(
+    request: Request,
+    desc: S3TestsConfigDesc,
+    mgr: S3TestsMgr = Depends(s3tests_mgr),
+) -> S3TestsConfigPostReply:
+    uuid: UUID = await mgr.config_create(desc)
+    return S3TestsConfigPostReply(uuid=uuid)
+
+
+@router.get("/config", response_model=S3TestsConfigGetReply)
+async def get_config(
+    request: Request, mgr: S3TestsMgr = Depends(s3tests_mgr)
+) -> S3TestsConfigGetReply:
+    lst: List[S3TestsConfigEntry] = await mgr.config_list()
+    return S3TestsConfigGetReply(config=lst)

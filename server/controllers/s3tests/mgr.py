@@ -11,7 +11,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, cast
 from uuid import UUID, uuid4
 
-from controllers.s3tests.config import S3TestsConfig
+from controllers.s3tests.config import (
+    S3TestsConfig,
+    S3TestsConfigDesc,
+    S3TestsConfigEntry,
+)
 from fastapi.logger import logger
 from libstuff import git
 from common.error import ServerError
@@ -200,6 +204,31 @@ class S3TestsMgr:
             self._work_item = WorkItem(runner)
             return await self._work_item.run()
         pass
+
+    async def config_create(self, desc: S3TestsConfigDesc) -> UUID:
+        uuid_ns = "s3tests-config"
+        name_ns = "s3tests-config-by-name"
+        name = desc.name.strip()
+
+        async with self._db.transaction() as tx:
+            if tx.exists(name_ns, name):
+                uuid_raw: Optional[str] = tx.get(ns=name_ns, key=name)
+                assert uuid_raw is not None
+                return UUID(uuid_raw)
+
+            uuid = uuid4()
+            entry = S3TestsConfigEntry(uuid=uuid, desc=desc)
+            tx.put(uuid_ns, str(uuid), entry)
+            tx.put(name_ns, desc.name, str(uuid))
+            return uuid
+
+    async def config_list(self) -> List[S3TestsConfigEntry]:
+        uuid_ns = "s3tests-config"
+        entries = await self._db.entries(ns=uuid_ns, model=S3TestsConfigEntry)
+        lst: List[S3TestsConfigEntry] = [
+            cast(S3TestsConfigEntry, v) for v in entries.values()
+        ]
+        return lst
 
     @property
     def results(self) -> Dict[UUID, S3TestRunResult]:
