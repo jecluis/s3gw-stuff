@@ -34,6 +34,7 @@ class S3TestRunResult(BaseModel):
     results: Dict[str, str]
     is_error: bool
     error_msg: str
+    config: S3TestsConfigEntry
 
 
 class WorkItem:
@@ -115,6 +116,7 @@ class WorkItem:
             results=res,
             is_error=self.is_error(),
             error_msg=self.error,
+            config=self._config,
         )
 
     @property
