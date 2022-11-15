@@ -81,32 +81,43 @@ class DBM:
             raise DBMError(f"invalid type on put: {type(value)}")
         return True
 
+    async def get_model(
+        self, *, ns: Optional[str] = None, key: str, model: Type[BaseModel]
+    ) -> Optional[BaseModel]:
+        async with self._lock:
+            return self._get_model(ns, key, model)
+
     async def get(
         self,
         *,
         ns: Optional[str] = None,
         key: str,
-        model: Optional[Type[BaseModel]] = None,
-    ) -> Union[str, BaseModel, None]:
-        _key = self._get_key(ns, key)
+    ) -> Optional[str]:
         async with self._lock:
-            return self._get(_key, model)
+            return self._get(ns, key)
 
-    def _get(
-        self, key: str, model: Optional[Type[BaseModel]]
-    ) -> Union[str, BaseModel, None]:
-        if key not in self._db:
+    def _get_model(
+        self, ns: Optional[str], key: str, model: Type[BaseModel]
+    ) -> Optional[BaseModel]:
+        _key = self._get_key(ns, key)
+        if _key not in self._db:
             return None
 
-        content = self._db[key].decode("utf-8")
-        if model is not None:
-            try:
-                value = model.parse_raw(content)
-            except ValidationError:
-                raise DBMError(
-                    f"unable to parse value for key '{key}' as '{type(model)}."
-                )
-            return value
+        content = self._db[_key].decode("utf-8")
+        try:
+            value = model.parse_raw(content)
+        except ValidationError:
+            raise DBMError(
+                f"unable to parse value for key '{_key}' as '{type(model)}."
+            )
+        return value
+
+    def _get(self, ns: Optional[str], key: str) -> Optional[str]:
+        _key = self._get_key(ns, key)
+        if _key not in self._db:
+            return None
+
+        content = self._db[_key].decode("utf-8")
         return content
 
     async def exists(self, *, ns: Optional[str] = None, key: str) -> bool:
