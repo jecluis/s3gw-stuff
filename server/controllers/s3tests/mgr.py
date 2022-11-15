@@ -24,6 +24,10 @@ from libstuff.s3tests.runner import S3TestsRunner, S3TestsError
 from pydantic import BaseModel
 
 
+class NoSuchConfigError(ServerError):
+    pass
+
+
 class S3TestRunResult(BaseModel):
     uuid: UUID
     time_start: Optional[dt]
@@ -120,6 +124,9 @@ class S3TestsMgr:
     _work_item: Optional[WorkItem]
     _results: Dict[UUID, S3TestRunResult]
 
+    NS_UUID = "s3tests-config"
+    NS_NAME = "s3tests-config-by-name"
+
     def __init__(self, config: S3TestsConfig, db: DBM) -> None:
         self._lock = asyncio.Lock()
         self._task = None
@@ -206,29 +213,50 @@ class S3TestsMgr:
         pass
 
     async def config_create(self, desc: S3TestsConfigDesc) -> UUID:
-        uuid_ns = "s3tests-config"
-        name_ns = "s3tests-config-by-name"
         name = desc.name.strip()
 
         async with self._db.transaction() as tx:
-            if tx.exists(name_ns, name):
-                uuid_raw: Optional[str] = tx.get(ns=name_ns, key=name)
+            if tx.exists(self.NS_NAME, name):
+                uuid_raw: Optional[str] = tx.get(ns=self.NS_NAME, key=name)
                 assert uuid_raw is not None
                 return UUID(uuid_raw)
 
             uuid = uuid4()
             entry = S3TestsConfigEntry(uuid=uuid, desc=desc)
-            tx.put(uuid_ns, str(uuid), entry)
-            tx.put(name_ns, desc.name, str(uuid))
+            tx.put(self.NS_UUID, str(uuid), entry)
+            tx.put(self.NS_NAME, desc.name, str(uuid))
             return uuid
 
     async def config_list(self) -> List[S3TestsConfigEntry]:
-        uuid_ns = "s3tests-config"
-        entries = await self._db.entries(ns=uuid_ns, model=S3TestsConfigEntry)
+        entries = await self._db.entries(
+            ns=self.NS_UUID, model=S3TestsConfigEntry
+        )
         lst: List[S3TestsConfigEntry] = [
             cast(S3TestsConfigEntry, v) for v in entries.values()
         ]
         return lst
+
+    async def config_get(
+        self, *, name: Optional[str] = None, uuid: Optional[UUID] = None
+    ) -> S3TestsConfigEntry:
+
+        _uuid: Optional[UUID] = uuid
+        if name is not None:
+            ptr: Optional[str] = await self._db.get(ns=self.NS_NAME, key=name)
+            if ptr is None:
+                raise NoSuchConfigError()
+            _uuid = UUID(ptr)
+
+        if _uuid is None:
+            raise NoSuchConfigError()
+
+        cfg: Optional[S3TestsConfigEntry] = await self._db.get_model(
+            ns=self.NS_UUID, key=str(_uuid), model=S3TestsConfigEntry
+        )
+        if cfg is None:
+            raise NoSuchConfigError()
+
+        return cfg
 
     @property
     def results(self) -> Dict[UUID, S3TestRunResult]:

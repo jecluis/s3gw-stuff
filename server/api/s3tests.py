@@ -7,10 +7,14 @@
 
 from datetime import datetime as dt
 from uuid import UUID
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from controllers.s3tests.config import S3TestsConfigDesc, S3TestsConfigEntry
-from controllers.s3tests.mgr import S3TestsMgr, S3TestRunResult
+from controllers.s3tests.mgr import (
+    S3TestsMgr,
+    S3TestRunResult,
+    NoSuchConfigError,
+)
 from fastapi import Depends, Request
 from fastapi.logger import logger
 from fastapi.routing import APIRouter
@@ -90,7 +94,25 @@ async def post_config(
 
 @router.get("/config", response_model=S3TestsConfigGetReply)
 async def get_config(
-    request: Request, mgr: S3TestsMgr = Depends(s3tests_mgr)
+    request: Request,
+    name: Optional[str] = None,
+    uuid: Optional[UUID] = None,
+    mgr: S3TestsMgr = Depends(s3tests_mgr),
 ) -> S3TestsConfigGetReply:
-    lst: List[S3TestsConfigEntry] = await mgr.config_list()
+    """
+    Obtains a list of configs. If `name` or `uuid` are specified, the list will
+    contain the config with said `name` or `uuid`; if such item does not exist,
+    the list will be empty. Should both `name` and `uuid` be specified, `name`
+    takes precedence.
+    """
+
+    lst: List[S3TestsConfigEntry] = []
+    if name is not None or uuid is not None:
+        try:
+            config = await mgr.config_get(name=name, uuid=uuid)
+            lst.append(config)
+        except NoSuchConfigError:
+            pass
+    else:
+        lst = await mgr.config_list()
     return S3TestsConfigGetReply(config=lst)
