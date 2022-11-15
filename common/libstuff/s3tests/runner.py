@@ -62,8 +62,6 @@ class S3TestsRunner:
     name: str
     suite: str
     s3testspath: Path
-    containerconf: ContainerConfig
-    s3testsconf: TestsConfig
 
     logger: logging.Logger
 
@@ -77,15 +75,11 @@ class S3TestsRunner:
         name: str,
         suite: str,
         s3tests: Path,
-        containerconf: ContainerConfig,
-        s3testsconf: TestsConfig,
         logger: logging.Logger = logging.getLogger(),
     ) -> None:
         self.name = name
         self.suite = suite
         self.s3testspath = s3tests
-        self.containerconf = containerconf
-        self.s3testsconf = s3testsconf
 
         self.cid = None
         self.s3tests_proc = None
@@ -95,9 +89,12 @@ class S3TestsRunner:
         self.logger = logger
 
     async def run(
-        self, progress_cb: Optional[ProgressCB] = None
+        self,
+        containerconf: ContainerConfig,
+        s3testsconf: TestsConfig,
+        progress_cb: Optional[ProgressCB] = None,
     ) -> List[Tuple[str, str]]:
-        cconf = self.containerconf
+        cconf = containerconf
         try:
             self.cid = await podman.run(
                 cconf.image,
@@ -112,7 +109,8 @@ class S3TestsRunner:
             )
 
         results, success = await asyncio.gather(
-            self._run_s3tests(progress_cb), self._monitor_container()
+            self._run_s3tests(s3testsconf, progress_cb),
+            self._monitor_container(),
         )
         if not success:
             self.logger.error("container died while running the tests!")
@@ -152,7 +150,7 @@ class S3TestsRunner:
         return success
 
     async def _run_s3tests(
-        self, progress_cb: Optional[ProgressCB] = None
+        self, s3testsconf: TestsConfig, progress_cb: Optional[ProgressCB] = None
     ) -> List[Tuple[str, str]]:
         self.logger.debug("running s3tests")
         base_cmd = [
@@ -174,8 +172,8 @@ class S3TestsRunner:
         filtered_tests = self._s3tests_prepare(
             self.suite,
             collected_tests,
-            self.s3testsconf.exclude,
-            self.s3testsconf.include,
+            s3testsconf.exclude,
+            s3testsconf.include,
         )
 
         self.logger.debug(f"collected {len(collected_tests)} tests")

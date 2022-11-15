@@ -64,8 +64,8 @@ async def main(
     plotsconf: plots.PlotsConfig,
 ) -> None:
 
-    runner = S3TestsRunner(name, suite, s3tests, config, s3testsconf)
-    results: List[Tuple[str, str]] = await runner.run()
+    runner = S3TestsRunner(name, suite, s3tests)
+    results: List[Tuple[str, str]] = await runner.run(config, s3testsconf)
     plot(name, results, plotsconf)
 
 

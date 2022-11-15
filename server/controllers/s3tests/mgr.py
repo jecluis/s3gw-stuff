@@ -39,6 +39,7 @@ class S3TestRunResult(BaseModel):
 class WorkItem:
     _uuid: UUID
     _runner: S3TestsRunner
+    _config: S3TestsConfigEntry
     _task: Optional[asyncio.Task[None]]
     _results: List[Tuple[str, str]]
     _is_running: bool
@@ -51,9 +52,12 @@ class WorkItem:
     _progress_total: int
     _progress_curr: int
 
-    def __init__(self, runner: S3TestsRunner) -> None:
+    def __init__(
+        self, runner: S3TestsRunner, config: S3TestsConfigEntry
+    ) -> None:
         self._uuid = uuid4()
         self._runner = runner
+        self._config = config
         self._task = None
         self._results = []
         self._is_running = False
@@ -81,8 +85,11 @@ class WorkItem:
     async def _run(self) -> None:
         self._is_running = True
         try:
+            _config = self._config.desc.config
             self._time_start = dt.now()
-            self._results = await self._runner.run(self._progress_cb)
+            self._results = await self._runner.run(
+                _config.container, _config.tests, self._progress_cb
+            )
         except (S3TestsError, RunnerError) as e:
             logger.error(f"error running s3tests: {e}")
             self._is_error = True
@@ -222,11 +229,9 @@ class S3TestsMgr:
                 run_name,
                 _config.tests.suite,
                 s3testspath,
-                _config.container,
-                _config.tests,
                 logger,
             )
-            self._work_item = WorkItem(runner)
+            self._work_item = WorkItem(runner, cfg)
             return await self._work_item.run()
         pass
 
