@@ -19,7 +19,7 @@ from fastapi.logger import logger
 from libstuff import git
 from common.error import ServerError
 from libstuff.dbm import DBM
-from libstuff.s3tests.runner import S3TestsRunner, S3TestsError
+from libstuff.s3tests.runner import S3TestsRunner, S3TestsError, RunnerError
 from pydantic import BaseModel
 
 
@@ -32,6 +32,8 @@ class S3TestRunResult(BaseModel):
     time_start: Optional[dt]
     time_end: Optional[dt]
     results: Dict[str, str]
+    is_error: bool
+    error_msg: str
 
 
 class WorkItem:
@@ -41,6 +43,8 @@ class WorkItem:
     _results: List[Tuple[str, str]]
     _is_running: bool
     _is_done: bool
+    _is_error: bool
+    _error_str: Optional[str]
     _time_start: Optional[dt]
     _time_end: Optional[dt]
 
@@ -54,6 +58,8 @@ class WorkItem:
         self._results = []
         self._is_running = False
         self._is_done = False
+        self._is_error = False
+        self._error_str = None
         self._time_start = None
         self._time_end = None
         self._progress_total = 0
@@ -77,8 +83,10 @@ class WorkItem:
         try:
             self._time_start = dt.now()
             self._results = await self._runner.run(self._progress_cb)
-        except S3TestsError as e:
+        except (S3TestsError, RunnerError) as e:
             logger.error(f"error running s3tests: {e}")
+            self._is_error = True
+            self._error_str = str(e)
 
         self._time_end = dt.now()
         self._is_done = True
@@ -98,6 +106,8 @@ class WorkItem:
             time_start=self._time_start,
             time_end=self._time_end,
             results=res,
+            is_error=self.is_error(),
+            error_msg=self.error,
         )
 
     @property
@@ -109,6 +119,13 @@ class WorkItem:
 
     def is_done(self) -> bool:
         return self._is_done
+
+    def is_error(self) -> bool:
+        return self._is_error
+
+    @property
+    def error(self) -> str:
+        return "" if self._error_str is None else self._error_str
 
 
 class S3TestsMgr:

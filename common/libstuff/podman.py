@@ -219,6 +219,7 @@ async def run(
     retcode = await proc.wait()
     if retcode != 0:
         assert proc.stderr is not None
+        print("podman error:")
         print((await proc.stderr.read()).decode("utf-8"))
         raise PodmanError()
 

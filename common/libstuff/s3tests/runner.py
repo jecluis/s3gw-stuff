@@ -106,6 +106,7 @@ class S3TestsRunner:
                 pull_if_newer=True,
             )
         except podman.PodmanError:
+            self.logger.error("unable to start container image.")
             raise RunnerError(
                 f"unable to start container image '{cconf.image}'."
             )
@@ -292,6 +293,7 @@ class S3TestsRunner:
                     break
 
                 l = line.decode("utf-8")
+                self.logger.debug(line)
                 m = re.match(regex, l)
                 if m is None:
                     continue
