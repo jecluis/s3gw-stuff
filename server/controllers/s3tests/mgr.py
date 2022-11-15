@@ -124,6 +124,7 @@ class S3TestsMgr:
 
     NS_UUID = "s3tests-config"
     NS_NAME = "s3tests-config-by-name"
+    NS_TESTS = "s3tests-results"
 
     def __init__(self, db: DBM) -> None:
         self._lock = asyncio.Lock()
@@ -139,7 +140,7 @@ class S3TestsMgr:
 
         db_entries = cast(
             Dict[str, S3TestRunResult],
-            await self._db.entries(ns="s3tests", model=S3TestRunResult),
+            await self._db.entries(ns=self.NS_TESTS, model=S3TestRunResult),
         )
         for k, v in db_entries.items():
             self._results[UUID(k)] = v
@@ -159,7 +160,9 @@ class S3TestsMgr:
                 uuid = self._work_item.uuid
                 if self._work_item.is_done():
                     res = self._work_item.results
-                    await self._db.put(ns="s3tests", key=str(uuid), value=res)
+                    await self._db.put(
+                        ns=self.NS_TESTS, key=str(uuid), value=res
+                    )
                     self._results[uuid] = res
                     self._work_item = None
                 else:
