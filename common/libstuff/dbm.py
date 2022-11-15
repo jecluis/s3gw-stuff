@@ -12,9 +12,12 @@ import asyncio
 from contextlib import asynccontextmanager
 import dbm.gnu as dbm
 from pathlib import Path
-from typing import Dict, AsyncGenerator, Optional, Type, Union
+from typing import Dict, AsyncGenerator, Optional, Type, TypeVar, Union
 
 from pydantic import BaseModel, ValidationError
+
+
+BM = TypeVar("BM", bound=BaseModel)
 
 
 class DBMError(Exception):
@@ -116,8 +119,8 @@ class DBM:
         return True
 
     async def get_model(
-        self, *, ns: Optional[str] = None, key: str, model: Type[BaseModel]
-    ) -> Optional[BaseModel]:
+        self, *, ns: Optional[str] = None, key: str, model: Type[BM]
+    ) -> Optional[BM]:
         async with self._lock:
             return self._get_model(ns, key, model)
 
@@ -131,8 +134,8 @@ class DBM:
             return self._get(ns, key)
 
     def _get_model(
-        self, ns: Optional[str], key: str, model: Type[BaseModel]
-    ) -> Optional[BaseModel]:
+        self, ns: Optional[str], key: str, model: Type[BM]
+    ) -> Optional[BM]:
         _key = self._get_key(ns, key)
         if _key not in self._db:
             return None
@@ -167,8 +170,8 @@ class DBM:
         *,
         ns: Optional[str] = None,
         prefix: Optional[str] = None,
-        model: Type[BaseModel | str] = str,
-    ) -> Dict[str, Type[BaseModel | str]]:
+        model: Type[BM | str] = str,
+    ) -> Dict[str, Type[BM | str]]:
 
         results_model: Dict[str, model] = {}
 
