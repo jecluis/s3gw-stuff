@@ -27,6 +27,10 @@ class NoSuchConfigError(ServerError):
     pass
 
 
+class NoSuchRunError(ServerError):
+    pass
+
+
 class S3TestRunProgress(BaseModel):
     tests_total: int
     tests_run: int
@@ -147,6 +151,12 @@ class WorkItem:
     def uuid(self) -> UUID:
         return self._uuid
 
+    @property
+    def desc(self) -> S3TestRunDesc:
+        return S3TestRunDesc(
+            uuid=self._uuid, time_start=self._time_start, config=self._config
+        )
+
     def is_running(self) -> bool:
         return self._is_running and not self._is_done
 
@@ -230,6 +240,9 @@ class S3TestsMgr:
     def is_running(self) -> bool:
         return not self._is_shutting_down and self._task is not None
 
+    def is_busy(self) -> bool:
+        return self.is_running() and self._work_item is not None
+
     async def run(self, cfg: S3TestsConfigEntry) -> UUID:
         async with self._lock:
             if self._work_item is not None:
@@ -307,6 +320,25 @@ class S3TestsMgr:
 
         return cfg
 
+    def get_run(self, uuid: UUID) -> S3TestRunResult:
+        if uuid in self._results:
+            return self._results[uuid]
+
+        elif self.is_busy():
+            assert self._work_item is not None
+            res = self._work_item.results
+            if res.uuid == uuid:
+                return res
+
+        raise NoSuchRunError()
+
     @property
     def results(self) -> Dict[UUID, S3TestRunResult]:
         return self._results
+
+    @property
+    def current_run(self) -> Optional[S3TestRunDesc]:
+        if not self.is_busy():
+            return None
+        assert self._work_item is not None
+        return self._work_item.desc

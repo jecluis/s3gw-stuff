@@ -12,8 +12,10 @@ from typing import Dict, List, Optional
 from controllers.s3tests.config import S3TestsConfigDesc, S3TestsConfigEntry
 from controllers.s3tests.mgr import (
     S3TestsMgr,
+    S3TestRunDesc,
     S3TestRunResult,
     NoSuchConfigError,
+    NoSuchRunError,
 )
 from fastapi import Depends, Request, HTTPException, status
 from fastapi.routing import APIRouter
@@ -36,10 +38,15 @@ class S3TestsRunReply(S3TestsBaseReply):
     uuid: UUID
 
 
-
-
 class S3TestsStatusReply(S3TestsBaseReply):
+    busy: bool
+    current: Optional[S3TestRunDesc]
+
+
+class S3TestsRunStatusReply(S3TestsBaseReply):
     running: bool
+    progress: float
+    item: S3TestRunResult
 
 
 class S3TestsConfigPostReply(S3TestsBaseReply):
@@ -81,7 +88,32 @@ async def get_s3tests_status(
     request: Request,
     mgr: S3TestsMgr = Depends(s3tests_mgr),
 ) -> S3TestsStatusReply:
-    return S3TestsStatusReply(running=mgr.is_running())
+    return S3TestsStatusReply(
+        busy=mgr.is_busy(),
+        current=mgr.current_run,
+    )
+
+
+@router.get("/status/{uuid}", response_model=S3TestsRunStatusReply)
+async def get_s3tests_run_status(
+    request: Request,
+    uuid: UUID,
+    mgr: S3TestsMgr = Depends(s3tests_mgr),
+) -> S3TestsRunStatusReply:
+
+    try:
+        res = mgr.get_run(uuid)
+    except NoSuchRunError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    _is_running = res.time_end is None
+    _progress = 0.0
+    if res.progress is not None:
+        _progress = res.progress.progress
+
+    return S3TestsRunStatusReply(
+        running=_is_running, progress=_progress, item=res
+    )
 
 
 @router.post("/config", response_model=S3TestsConfigPostReply)
