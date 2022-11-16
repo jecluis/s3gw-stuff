@@ -27,14 +27,29 @@ class NoSuchConfigError(ServerError):
     pass
 
 
-class S3TestRunResult(BaseModel):
+class S3TestRunProgress(BaseModel):
+    tests_total: int
+    tests_run: int
+
+    @property
+    def progress(self) -> float:
+        if self.tests_total == 0:
+            return 100
+        return (self.tests_run * 100) / self.tests_total
+
+
+class S3TestRunDesc(BaseModel):
     uuid: UUID
     time_start: Optional[dt]
+    config: S3TestsConfigEntry
+
+
+class S3TestRunResult(S3TestRunDesc):
     time_end: Optional[dt]
     results: Dict[str, str]
     is_error: bool
     error_msg: str
-    config: S3TestsConfigEntry
+    progress: Optional[S3TestRunProgress]
 
 
 class WorkItem:
@@ -52,6 +67,7 @@ class WorkItem:
 
     _progress_total: int
     _progress_curr: int
+    _has_progress: bool
 
     def __init__(
         self, runner: S3TestsRunner, config: S3TestsConfigEntry
@@ -69,6 +85,7 @@ class WorkItem:
         self._time_end = None
         self._progress_total = 0
         self._progress_curr = 0
+        self._has_progress = False
 
     async def run(self) -> UUID:
         if self._is_running or self._is_done:
@@ -79,6 +96,7 @@ class WorkItem:
         return self._uuid
 
     def _progress_cb(self, total: int, progress: int) -> None:
+        self._has_progress = True
         self._progress_total = total
         self._progress_curr = progress
         logger.debug(f"current progress: {progress}/{total}")
@@ -109,6 +127,11 @@ class WorkItem:
     @property
     def results(self) -> S3TestRunResult:
         res = {k: v for k, v in self._results}
+        progress: Optional[S3TestRunProgress] = None
+        if self._has_progress:
+            progress = S3TestRunProgress(
+                tests_total=self._progress_total, tests_run=self._progress_curr
+            )
         return S3TestRunResult(
             uuid=self._uuid,
             time_start=self._time_start,
@@ -117,6 +140,7 @@ class WorkItem:
             is_error=self.is_error(),
             error_msg=self.error,
             config=self._config,
+            progress=progress,
         )
 
     @property
