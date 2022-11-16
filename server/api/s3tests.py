@@ -16,7 +16,6 @@ from controllers.s3tests.mgr import (
     NoSuchConfigError,
 )
 from fastapi import Depends, Request, HTTPException, status
-from fastapi.logger import logger
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
 
@@ -37,8 +36,6 @@ class S3TestsRunReply(S3TestsBaseReply):
     uuid: UUID
 
 
-class S3TestsInfoReply(S3TestsBaseReply):
-    pass
 
 
 class S3TestsStatusReply(S3TestsBaseReply):
@@ -77,12 +74,6 @@ async def run_s3tests(
 
     run_uuid = await mgr.run(cfg)
     return S3TestsRunReply(date=dt.now(), uuid=run_uuid)
-
-
-@router.get("/info", response_model=S3TestsInfoReply)
-async def get_s3tests_info(request: Request, uuid: UUID) -> S3TestsInfoReply:
-    logger.debug(f"obtain status for uuid {uuid}.")
-    return S3TestsInfoReply()
 
 
 @router.get("/status", response_model=S3TestsStatusReply)
