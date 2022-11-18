@@ -1,0 +1,14 @@
+{
+  "arrowParens": "always",
+  "printWidth": 80,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "angular"
+      }
+    }
+  ]
+}
