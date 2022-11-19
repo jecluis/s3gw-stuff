@@ -149,4 +149,4 @@ async def get_config(
             pass
     else:
         lst = await mgr.config_list()
-    return S3TestsConfigGetReply(config=lst)
+    return S3TestsConfigGetReply(date=dt.now(), config=lst)
