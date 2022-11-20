@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,16 +17,19 @@ import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 
 @Injectable({
-  providedIn: "root"
+  providedIn: "root",
 })
 export class ServerAPIService {
-
   public url = "/api";
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient) {}
 
   public get<T>(endpoint: string): Observable<T> {
     return this.http.get<T>(this.buildURL(endpoint));
+  }
+
+  public post<T>(endpoint: string, body?: any): Observable<T> {
+    return this.http.post<T>(this.buildURL(endpoint), body);
   }
 
   private buildURL(endpoint: string): string {

@@ -44,7 +44,8 @@ limitations under the License.
             <ng-container *ngIf="!entry.collapsed">
               <tr>
                 <td colspan="2">
-                  <s3gw-config-view [config]="entry.config.desc.config"></s3gw-config-view>
+                  <s3gw-config-view [config]="entry.config.desc.config">
+                  </s3gw-config-view>
                 </td>
               </tr>
             </ng-container>
@@ -52,6 +53,55 @@ limitations under the License.
 
         </tbody>
       </table>
+    </div>
+    <div class="card-footer">
+      <button type="button" class="btn btn-outline-dark"
+              (click)="toggleNewConfig()" [disabled]="submittingConfig">
+        {{newConfigButtonLabel}}
+      </button>
+      <button type="button" class="btn btn-outline-primary ms-2"
+              *ngIf="!isNewConfigCollapsed"
+              [disabled]="newConfigForm.invalid || submittingConfig"
+              (click)="createNewConfig()">
+        Submit
+      </button>
+      <div class="card mt-2 p-3" [(ngbCollapse)]="isNewConfigCollapsed">
+        <div>
+          <form [formGroup]="newConfigForm" class="form-group">
+            <div class="mb-3">
+              <label for="config-name">Config Name</label>
+              <input id="config-name" type="text" class="form-control"
+                     formControlName="configName" [ngClass]="{
+                      'is-invalid': configName.touched && configName.errors,
+                      'is-valid': configName.touched && !configName.errors
+                    }" required>
+              <div class="invalid-feedback"
+                   *ngIf="configName.errors?.['required']">
+                Must specify a configuration name.
+              </div>
+              <div class="invalid-feedback"
+                   *ngIf="configName.errors?.['nameExists']">
+                Configuration name already exists.
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="config-contents">Configuration</label>
+              <textarea id="config-contents" class="form-control" rows="10"
+                        formControlName="configContents" [ngClass]="{
+                          'is-invalid': configContents.touched && configContents.errors
+                        }"></textarea>
+              <div class="invalid-feedback"
+                   *ngIf="configContents.errors?.['required']">
+                Configuration must be provided.
+              </div>
+              <div class="invalid-feedback"
+                   *ngIf="configContents.errors?.['invalidContents']">
+                Invalid YAML configuration.
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -63,10 +113,11 @@ limitations under the License.
         <i class="mdi mdi-flask me-1"></i>
         Results
         <div class="float-end">
-          <span class="me-2 fs-6 text-muted">{{resultsListLastUpdated|date:"EEE, MMMM d, y @ HH:mm:ss"}}</span>
+          <span class="me-2 fs-6 text-muted">{{resultsListLastUpdated|date:"EEE,
+            MMMM d, y @ HH:mm:ss"}}</span>
           <i [@refreshRotate]="refreshResultsRotateState"
-             (click)="refreshResults()"
-             class="mdi mdi-refresh" type="button"></i>
+             (click)="refreshResults()" class="mdi mdi-refresh"
+             type="button"></i>
         </div>
       </h5>
 
