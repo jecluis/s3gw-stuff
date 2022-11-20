@@ -58,6 +58,11 @@ class TestsConfig(BaseModel):
     include: List[str] = Field([])
 
 
+class CollectedTests(BaseModel):
+    all: List[str]
+    filtered: List[str]
+
+
 class S3TestsRunner:
     name: str
     suite: str
@@ -149,11 +154,10 @@ class S3TestsRunner:
 
         return success
 
-    async def _run_s3tests(
-        self, s3testsconf: TestsConfig, progress_cb: Optional[ProgressCB] = None
-    ) -> List[Tuple[str, str]]:
-        self.logger.debug("running s3tests")
-        base_cmd = [
+    def _get_cmd(
+        self, s3testsconf: TestsConfig, *, collect: bool = False
+    ) -> List[str]:
+        cmd: List[str] = [
             "bash",
             _get_helper_path().as_posix(),
             "--host",
@@ -163,32 +167,47 @@ class S3TestsRunner:
             "--path",
             self.s3testspath.as_posix(),
             "--suite",
-            self.suite,
+            s3testsconf.suite,
         ]
-        self.logger.debug(f"base cmd: {base_cmd}")
+        if collect:
+            cmd.append("--collect")
 
-        collect_cmd = base_cmd + ["--collect"]
-        collected_tests = await self._s3tests_collect(self.suite, collect_cmd)
+        return cmd
+
+    async def collect(self, s3testsconf: TestsConfig) -> CollectedTests:
+        collect_cmd = self._get_cmd(s3testsconf, collect=True)
+        collected_tests = await self._s3tests_collect(
+            s3testsconf.suite, collect_cmd
+        )
         filtered_tests = self._s3tests_prepare(
-            self.suite,
+            s3testsconf.suite,
             collected_tests,
             s3testsconf.exclude,
             s3testsconf.include,
         )
+        return CollectedTests(all=collected_tests, filtered=filtered_tests)
 
-        self.logger.debug(f"collected {len(collected_tests)} tests")
-        nfiltered = len(collected_tests) - len(filtered_tests)
+    async def _run_s3tests(
+        self, s3testsconf: TestsConfig, progress_cb: Optional[ProgressCB] = None
+    ) -> List[Tuple[str, str]]:
+        self.logger.debug("running s3tests")
+        run_cmd = self._get_cmd(s3testsconf, collect=False)
+
+        collected = await self.collect(s3testsconf)
+        self.logger.debug(f"collected {len(collected.all)} tests")
+        nfiltered = len(collected.all) - len(collected.filtered)
         self.logger.debug(
-            f"filtered {nfiltered} tests for a total of {len(filtered_tests)}"
+            f"filtered {nfiltered} tests for a total of "
+            f"{len(collected.filtered)}"
         )
 
-        if len(filtered_tests) == 0:
+        if len(collected.filtered) == 0:
             self.logger.info("no tests to run.")
             return []
 
-        self.logger.debug(f"running {len(filtered_tests)}")
+        self.logger.debug(f"running {len(collected.filtered)}")
         results = await self._s3tests_run(
-            self.suite, base_cmd, filtered_tests, progress_cb
+            self.suite, run_cmd, collected.filtered, progress_cb
         )
         self.s3tests_done = True
         return results

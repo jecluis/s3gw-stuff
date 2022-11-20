@@ -33,6 +33,7 @@ limitations under the License.
           <tr>
             <th scope="col">Name</th>
             <th scope="col">UUID</th>
+            <th scope="col">Units</th>
           </tr>
         </thead>
         <tbody class="table-group-divider">
@@ -40,10 +41,11 @@ limitations under the License.
             <tr (click)="entry.collapsed = !entry.collapsed">
               <td scope="row">{{entry.config.desc.name}}</td>
               <td scope="row">{{entry.config.uuid}}</td>
+              <td scope="row">{{entry.runnableUnits}}/{{entry.totalUnits}}</td>
             </tr>
             <ng-container *ngIf="!entry.collapsed">
               <tr>
-                <td colspan="2">
+                <td colspan="3">
                   <s3gw-config-view [config]="entry.config.desc.config">
                   </s3gw-config-view>
                 </td>

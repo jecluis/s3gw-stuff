@@ -19,7 +19,12 @@ from fastapi.logger import logger
 from libstuff import git
 from common.error import ServerError
 from libstuff.dbm import DBM
-from libstuff.s3tests.runner import S3TestsRunner, S3TestsError, RunnerError
+from libstuff.s3tests.runner import (
+    CollectedTests,
+    S3TestsRunner,
+    S3TestsError,
+    RunnerError,
+)
 from pydantic import BaseModel
 
 
@@ -54,6 +59,11 @@ class S3TestRunResult(S3TestRunDesc):
     is_error: bool
     error_msg: str
     progress: Optional[S3TestRunProgress]
+
+
+class S3TestsConfigItem(BaseModel):
+    config: S3TestsConfigEntry
+    tests: CollectedTests
 
 
 class WorkItem:
@@ -174,13 +184,16 @@ class WorkItem:
 class S3TestsMgr:
 
     _lock: asyncio.Lock
+    _configs_lock: asyncio.Lock
     _task: Optional[asyncio.Task[None]]
     _is_shutting_down: bool
 
     _db: DBM
+    _s3tests_path: Path
 
     _work_item: Optional[WorkItem]
     _results: Dict[UUID, S3TestRunResult]
+    _configs: Dict[UUID, S3TestsConfigItem]
 
     NS_UUID = "s3tests-config"
     NS_NAME = "s3tests-config-by-name"
@@ -188,22 +201,22 @@ class S3TestsMgr:
 
     def __init__(self, db: DBM) -> None:
         self._lock = asyncio.Lock()
+        self._configs_lock = asyncio.Lock()
         self._task = None
         self._is_shutting_down = False
         self._db = db
+        self._s3tests_path = Path("./s3tests.git").resolve()
         self._work_item = None
         self._results = {}
+        self._configs = {}
 
     async def start(self) -> None:
         if self._task is not None:
             return
 
-        db_entries = cast(
-            Dict[str, S3TestRunResult],
-            await self._db.entries(ns=self.NS_TESTS, model=S3TestRunResult),
-        )
-        for k, v in db_entries.items():
-            self._results[UUID(k)] = v
+        await self._init_s3tests_repo()
+        await self._load_results()
+        await self._load_configs()
 
         self._task = asyncio.create_task(self._tick())
         pass
@@ -212,6 +225,62 @@ class S3TestsMgr:
         self._is_shutting_down = True
         if self._task is not None:
             await self._task
+
+    async def _init_s3tests_repo(self) -> None:
+        if self._s3tests_path.exists():
+            return
+
+        self._s3tests_path.parent.mkdir(exist_ok=True, parents=True)
+        try:
+            git.clone("https://github.com/ceph/s3-tests", self._s3tests_path)
+        except git.GitError as e:
+            logger.error(
+                f"error cloning repository to {self._s3tests_path}: {e}"
+            )
+            raise ServerError(
+                f"error cloning repository to {self._s3tests_path}"
+            )
+
+    async def _load_results(self) -> None:
+        db_entries = cast(
+            Dict[str, S3TestRunResult],
+            await self._db.entries(ns=self.NS_TESTS, model=S3TestRunResult),
+        )
+        for k, v in db_entries.items():
+            self._results[UUID(k)] = v
+
+    async def _load_configs(self) -> None:
+        db_entries = await self._db.entries(
+            ns=self.NS_UUID, model=S3TestsConfigEntry
+        )
+        lst: List[S3TestsConfigEntry] = [
+            cast(S3TestsConfigEntry, v) for v in db_entries.values()
+        ]
+        for entry in lst:
+            await self._add_config(entry)
+
+    async def _add_config(self, entry: S3TestsConfigEntry) -> None:
+        async with self._configs_lock:
+            collected = await self._collect_config_tests(entry)
+            self._configs[entry.uuid] = S3TestsConfigItem(
+                config=entry, tests=collected
+            )
+            ntotal = len(collected.all)
+            nunits = len(collected.filtered)
+            logger.info(f"config {entry.uuid} with {nunits}/{ntotal} units")
+
+    async def _collect_config_tests(
+        self, config: S3TestsConfigEntry
+    ) -> CollectedTests:
+
+        cfg = config.desc.config.tests
+        runner = S3TestsRunner(
+            "collect",
+            config.desc.config.tests.suite,
+            self._s3tests_path,
+            logger,
+        )
+        return await runner.collect(cfg)
 
     async def _tick(self) -> None:
         while not self._is_shutting_down:
@@ -250,24 +319,12 @@ class S3TestsMgr:
 
             isodate = dt.now().isoformat()
             run_name = f"s3tests-{isodate}"
-            s3testspath = Path("./s3tests.git").resolve()
-            if not s3testspath.exists():
-                s3testspath.parent.mkdir(exist_ok=True, parents=True)
-                try:
-                    git.clone("https://github.com/ceph/s3-tests", s3testspath)
-                except git.GitError as e:
-                    logger.error(
-                        f"error cloning repository to {s3testspath}: {e}"
-                    )
-                    raise ServerError(
-                        f"error cloning repository to {s3testspath}"
-                    )
 
             _config = cfg.desc.config
             runner: S3TestsRunner = S3TestsRunner(
                 run_name,
                 _config.tests.suite,
-                s3testspath,
+                self._s3tests_path,
                 logger,
             )
             self._work_item = WorkItem(runner, cfg)
@@ -287,9 +344,15 @@ class S3TestsMgr:
             entry = S3TestsConfigEntry(uuid=uuid, desc=desc)
             tx.put(self.NS_UUID, str(uuid), entry)
             tx.put(self.NS_NAME, desc.name, str(uuid))
-            return uuid
 
-    async def config_list(self) -> List[S3TestsConfigEntry]:
+        await self._add_config(entry)
+        return uuid
+
+    async def config_list(self) -> List[S3TestsConfigItem]:
+
+        async with self._configs_lock:
+            return list(self._configs.values())
+
         entries = await self._db.entries(
             ns=self.NS_UUID, model=S3TestsConfigEntry
         )
@@ -300,7 +363,7 @@ class S3TestsMgr:
 
     async def config_get(
         self, *, name: Optional[str] = None, uuid: Optional[UUID] = None
-    ) -> S3TestsConfigEntry:
+    ) -> S3TestsConfigItem:
 
         _uuid: Optional[UUID] = uuid
         if name is not None:
@@ -311,6 +374,12 @@ class S3TestsMgr:
 
         if _uuid is None:
             raise NoSuchConfigError()
+
+        async with self._configs_lock:
+            if _uuid not in self._configs:
+                raise NoSuchConfigError()
+
+            return self._configs[_uuid]
 
         cfg: Optional[S3TestsConfigEntry] = await self._db.get_model(
             ns=self.NS_UUID, key=str(_uuid), model=S3TestsConfigEntry

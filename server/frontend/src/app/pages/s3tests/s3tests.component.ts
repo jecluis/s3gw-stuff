@@ -52,9 +52,19 @@ export type S3TestsConfigEntry = {
   desc: S3TestsConfigDesc;
 };
 
+export type S3TestsCollectedUnits = {
+  all: string[];
+  filtered: string[];
+};
+
+export type S3TestsConfigItem = {
+  config: S3TestsConfigEntry;
+  tests: S3TestsCollectedUnits;
+};
+
 type S3TestsConfigAPIResult = {
   date: Date;
-  config: S3TestsConfigEntry[];
+  entries: S3TestsConfigItem[];
 };
 
 type S3TestsResultEntry = {
@@ -78,6 +88,8 @@ type S3TestsResultsAPIResult = {
 
 type S3TestsConfigTableEntry = {
   config: S3TestsConfigEntry;
+  totalUnits: number;
+  runnableUnits: number;
   collapsed: boolean;
 };
 
@@ -193,8 +205,13 @@ export class S3testsComponent implements OnInit, OnDestroy {
       .subscribe((cfg: S3TestsConfigAPIResult) => {
         this.errorOnLoadingConfig = false;
         let lst: S3TestsConfigTableEntry[] = [];
-        cfg.config.forEach((e: S3TestsConfigEntry) => {
-          lst.push({ config: e, collapsed: true });
+        cfg.entries.forEach((e: S3TestsConfigItem) => {
+          lst.push({
+            config: e.config,
+            totalUnits: e.tests.all.length,
+            runnableUnits: e.tests.filtered.length,
+            collapsed: true,
+          });
         });
         this.configList = lst;
         this.configListLastUpdated = cfg.date;

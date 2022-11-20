@@ -9,8 +9,9 @@ from datetime import datetime as dt
 from uuid import UUID
 from typing import Dict, List, Optional
 
-from controllers.s3tests.config import S3TestsConfigDesc, S3TestsConfigEntry
+from controllers.s3tests.config import S3TestsConfigDesc
 from controllers.s3tests.mgr import (
+    S3TestsConfigItem,
     S3TestsMgr,
     S3TestRunDesc,
     S3TestRunResult,
@@ -54,7 +55,7 @@ class S3TestsConfigPostReply(S3TestsBaseReply):
 
 
 class S3TestsConfigGetReply(S3TestsBaseReply):
-    config: List[S3TestsConfigEntry]
+    entries: List[S3TestsConfigItem]
 
 
 @router.get("/results", response_model=S3TestsResultsReply)
@@ -72,14 +73,14 @@ async def run_s3tests(
     uuid: Optional[UUID] = None,
 ) -> S3TestsRunReply:
 
-    cfg: Optional[S3TestsConfigEntry] = None
+    entry: Optional[S3TestsConfigItem] = None
     try:
-        cfg = await mgr.config_get(name=name, uuid=uuid)
+        entry = await mgr.config_get(name=name, uuid=uuid)
     except NoSuchConfigError:
         raise HTTPException(status.HTTP_404_NOT_FOUND)
-    assert cfg is not None
+    assert entry is not None
 
-    run_uuid = await mgr.run(cfg)
+    run_uuid = await mgr.run(entry.config)
     return S3TestsRunReply(date=dt.now(), uuid=run_uuid)
 
 
@@ -140,7 +141,7 @@ async def get_config(
     takes precedence.
     """
 
-    lst: List[S3TestsConfigEntry] = []
+    lst: List[S3TestsConfigItem] = []
     if name is not None or uuid is not None:
         try:
             config = await mgr.config_get(name=name, uuid=uuid)
@@ -149,4 +150,4 @@ async def get_config(
             pass
     else:
         lst = await mgr.config_list()
-    return S3TestsConfigGetReply(date=dt.now(), config=lst)
+    return S3TestsConfigGetReply(date=dt.now(), entries=lst)
