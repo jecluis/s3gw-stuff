@@ -197,7 +197,7 @@ class S3TestsRunner:
         collected_tests: List[str] = []
 
         async def _gather_tests(reader: asyncio.StreamReader) -> None:
-            regex = re.compile(f"^{suite}\\.(test_[\\w\\d_-]+) ... \\w+.*$")
+            regex = re.compile(f"^{suite}.*\\.(test_[\\w\\d_-]+) ... \\w+.*$")
             async for line in reader:
                 l = line.decode("utf-8")
                 m = re.match(regex, l)
