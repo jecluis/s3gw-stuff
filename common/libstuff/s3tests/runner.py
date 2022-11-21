@@ -65,7 +65,6 @@ class CollectedTests(BaseModel):
 
 class S3TestsRunner:
     name: str
-    suite: str
     s3testspath: Path
 
     logger: logging.Logger
@@ -78,12 +77,10 @@ class S3TestsRunner:
     def __init__(
         self,
         name: str,
-        suite: str,
         s3tests: Path,
         logger: logging.Logger = logging.getLogger(),
     ) -> None:
         self.name = name
-        self.suite = suite
         self.s3testspath = s3tests
 
         self.cid = None
@@ -207,7 +204,7 @@ class S3TestsRunner:
 
         self.logger.debug(f"running {len(collected.filtered)}")
         results = await self._s3tests_run(
-            self.suite, run_cmd, collected.filtered, progress_cb
+            s3testsconf.suite, run_cmd, collected.filtered, progress_cb
         )
         self.s3tests_done = True
         return results

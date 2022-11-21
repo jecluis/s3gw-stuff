@@ -276,7 +276,6 @@ class S3TestsMgr:
         cfg = config.desc.config.tests
         runner = S3TestsRunner(
             "collect",
-            config.desc.config.tests.suite,
             self._s3tests_path,
             logger,
         )
@@ -323,7 +322,6 @@ class S3TestsMgr:
             _config = cfg.desc.config
             runner: S3TestsRunner = S3TestsRunner(
                 run_name,
-                _config.tests.suite,
                 self._s3tests_path,
                 logger,
             )
