@@ -47,8 +47,7 @@ class RunnerError(Exception):
 
 class ContainerConfig(BaseModel):
     image: str
-    ports: List[str] = Field([])
-    volumes: List[str] = Field([])
+    target_port: int
 
 
 class TestsConfig(BaseModel):
@@ -61,6 +60,12 @@ class TestsConfig(BaseModel):
 class CollectedTests(BaseModel):
     all: List[str]
     filtered: List[str]
+
+
+class ContainerRunConfig(BaseModel):
+    name: str
+    host_port: int
+    config: ContainerConfig
 
 
 class S3TestsRunner:
@@ -92,16 +97,17 @@ class S3TestsRunner:
 
     async def run(
         self,
-        containerconf: ContainerConfig,
+        containerconf: ContainerRunConfig,
         s3testsconf: TestsConfig,
         progress_cb: Optional[ProgressCB] = None,
     ) -> List[Tuple[str, str]]:
-        cconf = containerconf
+        crconf = containerconf
+        cconf = containerconf.config
+        ports: List[str] = [f"{crconf.host_port}:{cconf.target_port}"]
         try:
             self.cid = await podman.run(
                 cconf.image,
-                ports=cconf.ports,
-                volumes=cconf.volumes,
+                ports=ports,
                 pull_if_newer=True,
             )
         except podman.PodmanError:
@@ -111,7 +117,7 @@ class S3TestsRunner:
             )
 
         results, success = await asyncio.gather(
-            self._run_s3tests(s3testsconf, progress_cb),
+            self._run_s3tests(containerconf, s3testsconf, progress_cb),
             self._monitor_container(),
         )
         if not success:
@@ -152,7 +158,11 @@ class S3TestsRunner:
         return success
 
     def _get_cmd(
-        self, s3testsconf: TestsConfig, *, collect: bool = False
+        self,
+        s3testsconf: TestsConfig,
+        *,
+        port: int = 7480,
+        collect: bool = False,
     ) -> List[str]:
         cmd: List[str] = [
             "bash",
@@ -160,7 +170,7 @@ class S3TestsRunner:
             "--host",
             "127.0.0.1",
             "--port",
-            "7480",
+            str(port),
             "--path",
             self.s3testspath.as_posix(),
             "--suite",
@@ -185,10 +195,15 @@ class S3TestsRunner:
         return CollectedTests(all=collected_tests, filtered=filtered_tests)
 
     async def _run_s3tests(
-        self, s3testsconf: TestsConfig, progress_cb: Optional[ProgressCB] = None
+        self,
+        containerconf: ContainerRunConfig,
+        s3testsconf: TestsConfig,
+        progress_cb: Optional[ProgressCB] = None,
     ) -> List[Tuple[str, str]]:
         self.logger.debug("running s3tests")
-        run_cmd = self._get_cmd(s3testsconf, collect=False)
+        run_cmd = self._get_cmd(
+            s3testsconf, port=containerconf.host_port, collect=False
+        )
 
         collected = await self.collect(s3testsconf)
         self.logger.debug(f"collected {len(collected.all)} tests")

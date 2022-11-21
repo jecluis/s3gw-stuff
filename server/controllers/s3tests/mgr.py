@@ -8,6 +8,8 @@
 import asyncio
 from datetime import datetime as dt
 from pathlib import Path
+import random
+import string
 from typing import Dict, List, Optional, Tuple, cast
 from uuid import UUID, uuid4
 
@@ -21,6 +23,7 @@ from common.error import ServerError
 from libstuff.dbm import DBM
 from libstuff.s3tests.runner import (
     CollectedTests,
+    ContainerRunConfig,
     S3TestsRunner,
     S3TestsError,
     RunnerError,
@@ -64,6 +67,19 @@ class S3TestRunResult(S3TestRunDesc):
 class S3TestsConfigItem(BaseModel):
     config: S3TestsConfigEntry
     tests: CollectedTests
+
+
+def _gen_random_container_name() -> str:
+    rnd = "".join(random.choices(string.ascii_lowercase, k=4))
+    ts = dt.now().isoformat(timespec="minutes")
+    return f"s3tests-{ts}-{rnd}"
+
+
+def _gen_random_container_port() -> int:
+    FIRST_PORT = 44780
+    LAST_PORT = 44880
+    ports = list(range(FIRST_PORT, LAST_PORT))
+    return random.choice(ports)
 
 
 class WorkItem:
@@ -119,9 +135,15 @@ class WorkItem:
         self._is_running = True
         try:
             _config = self._config.desc.config
+            _cconf = ContainerRunConfig(
+                name=_gen_random_container_name(),
+                host_port=_gen_random_container_port(),
+                config=_config.container,
+            )
+
             self._time_start = dt.now()
             self._results = await self._runner.run(
-                _config.container, _config.tests, self._progress_cb
+                _cconf, _config.tests, self._progress_cb
             )
         except (S3TestsError, RunnerError) as e:
             logger.error(f"error running s3tests: {e}")

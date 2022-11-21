@@ -94,8 +94,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   private defaultConfigContents = {
     container: {
       image: "ghcr.io/aquarist-labs/s3gw:latest",
-      ports: ["7480:7480"],
-      volumes: [],
+      target_port: 7480,
     },
     tests: {
       suite: "s3tests_boto3.functional",
