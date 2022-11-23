@@ -104,9 +104,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
     },
   };
 
-  // private configReloadInterval = 2000;
   private configSubscription?: Subscription;
-  // private configRefreshTimerSubscription?: Subscription;
 
   public constructor(private svc: ServerAPIService) {}
 
@@ -129,12 +127,6 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
         finalize(() => {
           this.loadingConfig = false;
           this.firstConfigLoadComplete = true;
-          // this.configRefreshTimerSubscription = timer(this.configReloadInterval)
-          //   .pipe(take(1))
-          //   .subscribe(() => {
-          //     this.configSubscription!.unsubscribe();
-          //     this.reloadConfig();
-          //   });
         }),
         take(1),
       )
