@@ -13,10 +13,56 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<div class="p-5">
-  <s3gw-s3tests-config></s3gw-s3tests-config>
-</div>
+<div class="container-fluid">
 
-<div class="p-5">
-  <s3gw-s3tests-results></s3gw-s3tests-results>
+  <div class="row border-bottom border-3" style="height: 70px">
+    <div class="col-12">
+      <div class="d-flex flex-row align-items-center h-100 px-2">
+        <h5 class="fw-bold">S3 TESTS</h5>
+        <div class="ps-3" *ngIf="!isBusy">
+          <h5 class="text-success">
+            <i class="mdi mdi-server me-1"></i>
+            AVAILABLE
+          </h5>
+        </div>
+        <div class="ps-3 d-flex flex-row align-items-center h-100"
+             *ngIf="isBusy">
+          <h5 class="text-info">
+            <i class="mdi mdi-run-fast me-1"></i>
+            <span>RUNNING</span>
+          </h5>
+          <div class="ps-3" style="margin-bottom: 0.5rem">
+            <span class="fw-bold">CONFIG</span>
+            <span class="ps-1 fst-italic">
+              {{currentConfig?.desc?.name}}
+            </span>
+          </div>
+          <div class="ps-3" style="margin-bottom: 0.5rem">
+            <span>
+              {{currentProgress?.run}} of {{currentProgress?.total}}
+            </span>
+            <span class="ps-3">
+              ({{currentProgress?.percent}}%)
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-12 col-xxl-6">
+      <div class="p-5">
+        <s3gw-s3tests-config></s3gw-s3tests-config>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-12 col-xxl-6">
+      <div class="p-5">
+        <s3gw-s3tests-results></s3gw-s3tests-results>
+      </div>
+    </div>
+  </div>
 </div>

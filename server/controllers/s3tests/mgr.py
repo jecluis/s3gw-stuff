@@ -54,6 +54,7 @@ class S3TestRunDesc(BaseModel):
     uuid: UUID
     time_start: Optional[dt]
     config: S3TestsConfigEntry
+    progress: Optional[S3TestRunProgress]
 
 
 class S3TestRunResult(S3TestRunDesc):
@@ -61,7 +62,6 @@ class S3TestRunResult(S3TestRunDesc):
     results: Dict[str, str]
     is_error: bool
     error_msg: str
-    progress: Optional[S3TestRunProgress]
 
 
 class S3TestsConfigItem(BaseModel):
@@ -161,13 +161,16 @@ class WorkItem:
         self._is_running = False
 
     @property
+    def progress(self) -> Optional[S3TestRunProgress]:
+        if not self._has_progress:
+            return None
+        return S3TestRunProgress(
+            tests_total=self._progress_total, tests_run=self._progress_curr
+        )
+
+    @property
     def results(self) -> S3TestRunResult:
         res = {k: v for k, v in self._results}
-        progress: Optional[S3TestRunProgress] = None
-        if self._has_progress:
-            progress = S3TestRunProgress(
-                tests_total=self._progress_total, tests_run=self._progress_curr
-            )
         return S3TestRunResult(
             uuid=self._uuid,
             time_start=self._time_start,
@@ -176,7 +179,7 @@ class WorkItem:
             is_error=self.is_error(),
             error_msg=self.error,
             config=self._config,
-            progress=progress,
+            progress=self.progress,
         )
 
     @property
@@ -186,7 +189,10 @@ class WorkItem:
     @property
     def desc(self) -> S3TestRunDesc:
         return S3TestRunDesc(
-            uuid=self._uuid, time_start=self._time_start, config=self._config
+            uuid=self._uuid,
+            time_start=self._time_start,
+            config=self._config,
+            progress=self.progress,
         )
 
     def is_running(self) -> bool:
