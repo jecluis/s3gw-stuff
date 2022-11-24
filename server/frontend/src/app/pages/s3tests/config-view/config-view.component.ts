@@ -14,7 +14,10 @@
  */
 import { Component, Input, OnInit } from "@angular/core";
 import { dump, JSON_SCHEMA } from "js-yaml";
-import { S3TestsConfig } from "~/app/shared/types/s3tests.type";
+import {
+  S3TestsConfig,
+  S3TestsConfigEntry,
+} from "~/app/shared/types/s3tests.type";
 
 @Component({
   selector: "s3gw-config-view",
@@ -23,15 +26,17 @@ import { S3TestsConfig } from "~/app/shared/types/s3tests.type";
 })
 export class ConfigViewComponent implements OnInit {
   @Input()
-  config?: S3TestsConfig;
+  public config?: S3TestsConfigEntry;
+  public yamlConfig: string = "";
 
-  yamlConfig: string = "";
+  private configSpec?: S3TestsConfig;
 
-  constructor() {}
+  public constructor() {}
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     if (!!this.config) {
-      this.yamlConfig = dump(this.config, {
+      this.configSpec = this.config.desc.config;
+      this.yamlConfig = dump(this.configSpec, {
         noRefs: true,
         schema: JSON_SCHEMA,
         noCompatMode: true,
