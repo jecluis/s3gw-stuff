@@ -22,27 +22,11 @@ import {
   Subscription,
   take,
 } from "rxjs";
-import { ServerAPIService } from "~/app/shared/services/api/server-api.service";
-import { S3TestsConfigEntry } from "~/app/shared/types/s3tests.type";
-
-type S3TestsResultEntry = {
-  uuid: string;
-  time_start: string;
-  time_end: string;
-  config: S3TestsConfigEntry;
-  results: { [id: string]: string };
-  is_error: boolean;
-  error_msg: string;
-  progress?: {
-    tests_total: number;
-    tests_run: number;
-  };
-};
-
-type S3TestsResultsAPIResult = {
-  date: Date;
-  results: { [id: string]: S3TestsResultEntry };
-};
+import {
+  S3TestsAPIService,
+  S3TestsResultsAPIResult,
+} from "~/app/shared/services/api/s3tests-api.service";
+import { S3TestsResultEntry } from "~/app/shared/types/s3tests.type";
 
 type S3TestsResultsTableEntry = {
   result: S3TestsResultEntry;
@@ -76,7 +60,7 @@ export class S3TestsResultsComponent implements OnInit, OnDestroy {
   public refreshResultsRotateState: number = 0;
   public resultsSubscription?: Subscription;
 
-  public constructor(private svc: ServerAPIService) {}
+  public constructor(private svc: S3TestsAPIService) {}
 
   public ngOnInit(): void {
     this.reloadResults();
@@ -125,7 +109,7 @@ export class S3TestsResultsComponent implements OnInit, OnDestroy {
   }
 
   private loadResults(): Observable<S3TestsResultsAPIResult> {
-    return this.svc.get<S3TestsResultsAPIResult>("/s3tests/results");
+    return this.svc.getResults();
   }
 
   public refreshResults(): void {

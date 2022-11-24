@@ -46,3 +46,27 @@ export type S3TestsConfigItem = {
   config: S3TestsConfigEntry;
   tests: S3TestsCollectedUnits;
 };
+
+export type S3TestsResultEntry = {
+  uuid: string;
+  time_start: string;
+  time_end: string;
+  config: S3TestsConfigEntry;
+  results: { [id: string]: string };
+  is_error: boolean;
+  error_msg: string;
+  progress?: {
+    tests_total: number;
+    tests_run: number;
+  };
+};
+
+export type S3TestsCurrentRun = {
+  uuid: string;
+  time_start: string;
+  config: S3TestsConfigEntry;
+  progress: {
+    tests_total: number;
+    tests_run: number;
+  };
+};

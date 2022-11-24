@@ -31,7 +31,11 @@ import {
   Subscription,
   take,
 } from "rxjs";
-import { ServerAPIService } from "~/app/shared/services/api/server-api.service";
+import {
+  S3TestsAPIService,
+  S3TestsConfigAPIPostResult,
+  S3TestsConfigAPIResult,
+} from "~/app/shared/services/api/s3tests-api.service";
 import {
   S3TestsConfigDesc,
   S3TestsConfigEntry,
@@ -43,16 +47,6 @@ type S3TestsConfigTableEntry = {
   totalUnits: number;
   runnableUnits: number;
   collapsed: boolean;
-};
-
-type S3TestsConfigAPIResult = {
-  date: Date;
-  entries: S3TestsConfigItem[];
-};
-
-type S3TestsConfigPostResult = {
-  date: string;
-  uuid: string;
 };
 
 @Component({
@@ -106,7 +100,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
 
   private configSubscription?: Subscription;
 
-  public constructor(private svc: ServerAPIService) {}
+  public constructor(private svc: S3TestsAPIService) {}
 
   public ngOnInit(): void {
     this.reloadConfig();
@@ -148,7 +142,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   }
 
   private loadConfig(): Observable<S3TestsConfigAPIResult> {
-    return this.svc.get<S3TestsConfigAPIResult>("/s3tests/config");
+    return this.svc.getConfig();
   }
 
   public refreshConfig(): void {
@@ -205,7 +199,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
 
     this.submittingConfig = true;
     this.svc
-      .post<S3TestsConfigPostResult>("/s3tests/config", desc)
+      .postConfig(desc)
       .pipe(
         catchError((err) => {
           console.error("error submitting new config: ", err);
@@ -217,7 +211,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
         }),
         take(1),
       )
-      .subscribe((res: S3TestsConfigPostResult) => {
+      .subscribe((res: S3TestsConfigAPIPostResult) => {
         this.toggleNewConfig();
         this.refreshConfig();
       });

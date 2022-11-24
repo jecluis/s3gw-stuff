@@ -22,29 +22,16 @@ import {
   take,
   timer,
 } from "rxjs";
-import { ServerAPIService } from "~/app/shared/services/api/server-api.service";
+import {
+  S3TestsAPIService,
+  S3TestsStatusAPIResult,
+} from "~/app/shared/services/api/s3tests-api.service";
 import { S3TestsConfigEntry } from "~/app/shared/types/s3tests.type";
 
 type Progress = {
   total: number;
   run: number;
   percent: number;
-};
-
-type S3TestsCurrentRun = {
-  uuid: string;
-  time_start: string;
-  config: S3TestsConfigEntry;
-  progress: {
-    tests_total: number;
-    tests_run: number;
-  };
-};
-
-type S3TestsStatusAPIResult = {
-  date: string;
-  busy: boolean;
-  current?: S3TestsCurrentRun;
 };
 
 @Component({
@@ -62,7 +49,7 @@ export class S3testsComponent implements OnInit, OnDestroy {
   private statusSubscription?: Subscription;
   private statusRefreshTimerSubscription?: Subscription;
 
-  public constructor(private svc: ServerAPIService) {}
+  public constructor(private svc: S3TestsAPIService) {}
 
   public ngOnInit(): void {
     this.refreshStatus();
@@ -117,6 +104,6 @@ export class S3testsComponent implements OnInit, OnDestroy {
   }
 
   private updateStatus(): Observable<S3TestsStatusAPIResult> {
-    return this.svc.get<S3TestsStatusAPIResult>("/s3tests/status");
+    return this.svc.getStatus();
   }
 }
