@@ -26,6 +26,11 @@ import {
   S3TestsAPIService,
   S3TestsStatusAPIResult,
 } from "~/app/shared/services/api/s3tests-api.service";
+import {
+  S3TestsProgress,
+  S3TestsStatus,
+  S3TestsStatusService,
+} from "~/app/shared/services/s3tests-status.service";
 import { S3TestsConfigEntry } from "~/app/shared/types/s3tests.type";
 
 type Progress = {
@@ -42,14 +47,14 @@ type Progress = {
 export class S3testsComponent implements OnInit, OnDestroy {
   public isBusy: boolean = false;
   public currentConfig?: S3TestsConfigEntry;
-  public currentProgress?: Progress;
+  public currentProgress?: S3TestsProgress;
   public currentDuration?: number;
 
   private statusUpdateInterval = 1000;
   private statusSubscription?: Subscription;
   private statusRefreshTimerSubscription?: Subscription;
 
-  public constructor(private svc: S3TestsAPIService) {}
+  public constructor(private svc: S3TestsStatusService) {}
 
   public ngOnInit(): void {
     this.refreshStatus();
@@ -61,49 +66,17 @@ export class S3testsComponent implements OnInit, OnDestroy {
   }
 
   private refreshStatus(): void {
-    this.statusSubscription = this.updateStatus()
-      .pipe(
-        catchError((err) => {
-          console.error("error refreshing running status: ", err);
-          return EMPTY;
-        }),
-        finalize(() => {
-          this.statusRefreshTimerSubscription = timer(this.statusUpdateInterval)
-            .pipe(take(1))
-            .subscribe(() => {
-              this.statusSubscription!.unsubscribe();
-              this.refreshStatus();
-            });
-        }),
-        take(1),
-      )
-      .subscribe((status: S3TestsStatusAPIResult) => {
-        if (!status.busy) {
-          this.isBusy = false;
-          this.currentConfig = undefined;
-          this.currentProgress = undefined;
-          this.currentDuration = undefined;
-        } else {
-          this.isBusy = true;
-          this.currentConfig = status.current!.config;
-          const progress = status.current!.progress;
-          const total = progress.tests_total;
-          const run = progress.tests_run;
-          const percent =
-            Math.round(((run * 100) / total + Number.EPSILON) * 100) / 100;
-          this.currentProgress = {
-            total: total,
-            run: run,
-            percent: percent,
-          };
-          const startTime = new Date(status.current!.time_start).getTime();
-          const now = new Date().getTime();
-          this.currentDuration = (now - startTime) / 1000;
+    this.statusSubscription = this.svc.status.subscribe({
+      next: (status: S3TestsStatus) => {
+        if (!status) {
+          return;
         }
-      });
-  }
+        this.isBusy = status.busy;
+        this.currentConfig = status.item?.config;
+        this.currentProgress = status.progress;
+      },
+    });
 
-  private updateStatus(): Observable<S3TestsStatusAPIResult> {
-    return this.svc.getStatus();
+    return;
   }
 }
