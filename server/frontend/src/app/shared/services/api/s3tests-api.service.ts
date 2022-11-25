@@ -56,7 +56,9 @@ export class S3TestsAPIService {
   public postConfig(
     desc: S3TestsConfigDesc,
   ): Observable<S3TestsConfigAPIPostResult> {
-    return this.svc.post<S3TestsConfigAPIPostResult>("/s3tests/config", desc);
+    return this.svc.post<S3TestsConfigAPIPostResult>("/s3tests/config", {
+      body: desc,
+    });
   }
 
   public getResults(): Observable<S3TestsResultsAPIResult> {

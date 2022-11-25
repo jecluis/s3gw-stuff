@@ -12,9 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
+
+export type ServerAPIOptions = {
+  body?: any;
+  params?: HttpParams | { [param: string]: string | number | boolean };
+};
 
 @Injectable({
   providedIn: "root",
@@ -28,8 +33,10 @@ export class ServerAPIService {
     return this.http.get<T>(this.buildURL(endpoint));
   }
 
-  public post<T>(endpoint: string, body?: any): Observable<T> {
-    return this.http.post<T>(this.buildURL(endpoint), body);
+  public post<T>(endpoint: string, options?: ServerAPIOptions): Observable<T> {
+    return this.http.post<T>(this.buildURL(endpoint), options?.body, {
+      params: options?.params,
+    });
   }
 
   private buildURL(endpoint: string): string {
