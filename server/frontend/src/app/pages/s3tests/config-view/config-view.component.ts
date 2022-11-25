@@ -14,6 +14,8 @@
  */
 import { Component, Input, OnInit } from "@angular/core";
 import { dump, JSON_SCHEMA } from "js-yaml";
+import { finalize, Subscription } from "rxjs";
+import { S3TestsAPIService } from "~/app/shared/services/api/s3tests-api.service";
 import {
   S3TestsConfig,
   S3TestsConfigEntry,
@@ -27,11 +29,17 @@ import {
 export class ConfigViewComponent implements OnInit {
   @Input()
   public config?: S3TestsConfigEntry;
+  @Input()
+  public busy: boolean = false;
+
   public yamlConfig: string = "";
+  public isPreparingToRun: boolean = false;
+  public failedToRun: boolean = false;
 
   private configSpec?: S3TestsConfig;
+  private runSubscription?: Subscription;
 
-  public constructor() {}
+  public constructor(private svc: S3TestsAPIService) {}
 
   public ngOnInit(): void {
     if (!!this.config) {
@@ -44,5 +52,27 @@ export class ConfigViewComponent implements OnInit {
         quotingType: '"',
       });
     }
+  }
+
+  public runConfig(): void {
+    if (this.busy) {
+      return;
+    }
+
+    this.failedToRun = false;
+    this.isPreparingToRun = true;
+    this.runSubscription = this.svc
+      .runConfig(this.config!.uuid)
+      .pipe(
+        finalize(() => {
+          this.isPreparingToRun = false;
+        }),
+      )
+      .subscribe((res: boolean) => {
+        if (!res) {
+          this.failedToRun = true;
+        }
+        this.runSubscription!.unsubscribe();
+      });
   }
 }

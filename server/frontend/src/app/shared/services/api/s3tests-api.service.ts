@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { Injectable } from "@angular/core";
-import { Observable } from "rxjs";
+import { catchError, map, Observable, of, take } from "rxjs";
 import { ServerAPIService } from "~/app/shared/services/api/server-api.service";
 import {
   S3TestsConfigDesc,
@@ -43,6 +43,11 @@ export type S3TestsStatusAPIResult = {
   current?: S3TestsCurrentRun;
 };
 
+type S3TestsRunAPIResult = {
+  date: string;
+  uuid: string;
+};
+
 @Injectable({
   providedIn: "root",
 })
@@ -67,5 +72,20 @@ export class S3TestsAPIService {
 
   public getStatus(): Observable<S3TestsStatusAPIResult> {
     return this.svc.get<S3TestsStatusAPIResult>("/s3tests/status");
+  }
+
+  public runConfig(configUUID: string): Observable<boolean> {
+    return this.svc
+      .post<S3TestsRunAPIResult>("/s3tests/run", {
+        params: { uuid: configUUID },
+      })
+      .pipe(
+        take(1),
+        map(() => true),
+        catchError((err) => {
+          console.error(`error running config ${configUUID}:`, err);
+          return of(false);
+        }),
+      );
   }
 }
