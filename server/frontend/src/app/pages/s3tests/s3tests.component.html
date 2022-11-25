@@ -37,12 +37,13 @@ limitations under the License.
               {{currentConfig?.desc?.name}}
             </span>
           </div>
-          <div class="ps-3" style="margin-bottom: 0.5rem">
+          <div class="ps-3" style="margin-bottom: 0.5rem"
+               *ngIf="!!currentProgress">
             <span>
-              {{currentProgress?.done}} of {{currentProgress?.total}}
+              {{currentProgress.done}} of {{currentProgress.total}}
             </span>
             <span class="ps-3">
-              ({{currentProgress?.percent}}%)
+              ({{currentProgress.percent}}%)
             </span>
           </div>
         </div>

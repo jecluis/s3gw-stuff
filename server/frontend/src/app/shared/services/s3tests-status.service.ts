@@ -90,20 +90,19 @@ export class S3TestsStatusService implements OnDestroy {
         } else {
           console.assert(!!res.current);
           const curr = res.current!;
-          const progress = curr.progress;
-          const total = progress.tests_total;
-          const done = progress.tests_run;
-          const percent =
-            Math.round(((done * 100) / total + Number.EPSILON) * 100) / 100;
+          let progress: S3TestsProgress | undefined = undefined;
+          if (!!curr.progress) {
+            const total = curr.progress.tests_total;
+            const done = curr.progress.tests_run;
+            const percent =
+              Math.round(((done * 100) / total + Number.EPSILON) * 100) / 100;
+            progress = { total: total, done: done, percent: percent };
+          }
           status = {
             busy: true,
             lastRefreshed: date,
             item: curr,
-            progress: {
-              total: total,
-              done: done,
-              percent: percent,
-            },
+            progress: progress,
           };
         }
         if (!!this.lastStatus && this.lastStatus.busy == status.busy) {
@@ -111,8 +110,14 @@ export class S3TestsStatusService implements OnDestroy {
             // don't update subject if there's nothing to change.
             return;
           }
-          if (this.lastStatus.progress!.percent == status.progress!.percent) {
+          if (!this.lastStatus.progress && !status.progress) {
             // no change in progress, don't update.
+            return;
+          } else if (
+            !!this.lastStatus.progress &&
+            !!status.progress &&
+            this.lastStatus.progress.percent === status.progress.percent
+          ) {
             return;
           }
         }
