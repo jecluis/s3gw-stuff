@@ -37,6 +37,10 @@ import {
   S3TestsConfigAPIResult,
 } from "~/app/shared/services/api/s3tests-api.service";
 import {
+  S3TestsStatus,
+  S3TestsStatusService,
+} from "~/app/shared/services/s3tests-status.service";
+import {
   S3TestsConfigDesc,
   S3TestsConfigEntry,
   S3TestsConfigItem,
@@ -84,6 +88,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   });
   public errorOnConfigSubmit: boolean = false;
   public submittingConfig: boolean = false;
+  public isRunning: boolean = false;
 
   private defaultConfigContents = {
     container: {
@@ -99,15 +104,25 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   };
 
   private configSubscription?: Subscription;
+  private statusSubscription?: Subscription;
 
-  public constructor(private svc: S3TestsAPIService) {}
+  public constructor(
+    private svc: S3TestsAPIService,
+    private statusSvc: S3TestsStatusService,
+  ) {}
 
   public ngOnInit(): void {
     this.reloadConfig();
+    this.statusSubscription = this.statusSvc.status.subscribe({
+      next: (s: S3TestsStatus) => {
+        this.isRunning = !!s ? s.busy : false;
+      },
+    });
   }
 
   public ngOnDestroy(): void {
     this.configSubscription?.unsubscribe();
+    this.statusSubscription?.unsubscribe();
   }
 
   private reloadConfig() {

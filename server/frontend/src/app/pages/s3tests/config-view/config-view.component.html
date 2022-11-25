@@ -17,7 +17,8 @@ limitations under the License.
   <div class="bg-info bg-opacity-10
               border-bottom border-info border-1" style="height: 70px">
     <div class="d-flex flex-row align-items-center h-100 px-2">
-      <button type="button" class="btn btn-success">Run</button>
+      <button type="button" class="btn btn-success"
+              [disabled]="busy">Run</button>
       <span class="ps-3"></span>
       <button type="button" class="btn btn-outline-dark">Delete</button>
     </div>
