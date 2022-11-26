@@ -17,14 +17,25 @@ limitations under the License.
 <div class="card">
   <table class="table">
     <tbody>
-      <tr *ngFor="let item of entry.results|keyvalue" [ngClass]="{
-            'alert': true,
-            'alert-danger': item.value !== 'ok',
-            'alert-success': item.value === 'ok'
-          }">
-        <td scope="row">{{item.key}}</td>
-        <td scope="row">{{item.value}}</td>
-      </tr>
+      <ng-container *ngFor="let item of tests|keyvalue">
+        <tr [ngClass]="{
+              'alert': true,
+              'alert-danger': item.value.isError,
+              'alert-success': !item.value.isError
+            }" (click)="item.value.collapsed = !item.value.collapsed">
+          <td scope="row">{{item.key}}</td>
+          <td scope="row">{{item.value.status}}</td>
+        </tr>
+        <ng-container *ngIf="!item.value.collapsed && item.value.isError">
+          <tr>
+            <td colspan="2">
+              <s3gw-s3tests-results-error-view [uuid]="uuid" [name]="item.key">
+              </s3gw-s3tests-results-error-view>
+            </td>
+          </tr>
+        </ng-container>
+
+      </ng-container>
     </tbody>
   </table>
 </div>

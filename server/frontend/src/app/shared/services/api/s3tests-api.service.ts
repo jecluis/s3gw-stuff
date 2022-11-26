@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 import { Injectable } from "@angular/core";
-import { catchError, map, Observable, of, take } from "rxjs";
+import { catchError, EMPTY, map, Observable, of, take } from "rxjs";
 import { ServerAPIService } from "~/app/shared/services/api/server-api.service";
 import {
   S3TestsConfigDesc,
@@ -41,6 +41,17 @@ export type S3TestsStatusAPIResult = {
   date: string;
   busy: boolean;
   current?: S3TestsCurrentRun;
+};
+
+export type S3TestsErrorEntry = {
+  name: string;
+  trace: string[];
+  log: string[];
+};
+
+export type S3TestsErrorsAPIGetResult = {
+  date: string;
+  errors: { [name: string]: S3TestsErrorEntry };
 };
 
 type S3TestsRunAPIResult = {
@@ -85,6 +96,22 @@ export class S3TestsAPIService {
         catchError((err) => {
           console.error(`error running config ${configUUID}:`, err);
           return of(false);
+        }),
+      );
+  }
+
+  public getErrors(uuid: string, name: string): Observable<S3TestsErrorEntry> {
+    return this.svc
+      .get<S3TestsErrorsAPIGetResult>("/s3tests/errors", {
+        params: { uuid: uuid, name: name },
+      })
+      .pipe(
+        take(1),
+        map((entry: S3TestsErrorsAPIGetResult) => {
+          if (!(name in entry.errors)) {
+            throw new Error("unknown test");
+          }
+          return entry.errors[name];
         }),
       );
   }

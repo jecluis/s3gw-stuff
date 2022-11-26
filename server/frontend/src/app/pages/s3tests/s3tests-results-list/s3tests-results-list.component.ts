@@ -15,6 +15,13 @@
 import { Component, Input, OnInit } from "@angular/core";
 import { S3TestsResultEntry } from "~/app/shared/types/s3tests.type";
 
+type TestEntry = {
+  name: string;
+  status: string;
+  isError: boolean;
+  collapsed: boolean;
+};
+
 @Component({
   selector: "s3gw-s3tests-results-list",
   templateUrl: "./s3tests-results-list.component.html",
@@ -24,9 +31,23 @@ export class S3TestsResultsListComponent implements OnInit {
   @Input()
   public entry!: S3TestsResultEntry;
 
+  public tests: { [name: string]: TestEntry } = {};
+  public uuid!: string;
+
   public constructor() {}
 
   public ngOnInit(): void {
+    this.uuid = this.entry.uuid;
+
+    Object.keys(this.entry.results).forEach((name: string) => {
+      const res = this.entry.results[name];
+      this.tests[name] = {
+        name: name,
+        status: res,
+        isError: res !== "ok",
+        collapsed: true,
+      };
+    });
     return;
   }
 }

@@ -8,6 +8,7 @@ import { ReactiveFormsModule } from "@angular/forms";
 import { S3TestsConfigComponent } from "~/app/pages/s3tests/s3tests-config/s3tests-config.component";
 import { S3TestsResultsComponent } from "~/app/pages/s3tests/s3tests-results/s3tests-results.component";
 import { S3TestsResultsListComponent } from "~/app/pages/s3tests/s3tests-results-list/s3tests-results-list.component";
+import { S3TestsResultsErrorViewComponent } from "~/app/pages/s3tests/s3tests-results-error-view/s3tests-results-error-view.component";
 
 @NgModule({
   declarations: [
@@ -16,6 +17,7 @@ import { S3TestsResultsListComponent } from "~/app/pages/s3tests/s3tests-results
     S3TestsConfigComponent,
     S3TestsResultsComponent,
     S3TestsResultsListComponent,
+    S3TestsResultsErrorViewComponent,
   ],
   imports: [
     CommonModule,
