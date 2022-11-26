@@ -29,8 +29,10 @@ export class ServerAPIService {
 
   constructor(private http: HttpClient) {}
 
-  public get<T>(endpoint: string): Observable<T> {
-    return this.http.get<T>(this.buildURL(endpoint));
+  public get<T>(endpoint: string, options?: ServerAPIOptions): Observable<T> {
+    return this.http.get<T>(this.buildURL(endpoint), {
+      params: options?.params,
+    });
   }
 
   public post<T>(endpoint: string, options?: ServerAPIOptions): Observable<T> {
