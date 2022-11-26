@@ -94,7 +94,7 @@ export class S3TestsResultsComponent implements OnInit, OnDestroy {
           let cfgName = res.config.desc.name;
           let tstart: Date = new Date(res.time_start);
           let tend: Date = new Date(res.time_end);
-          let duration = tend.getTime() - tstart.getTime();
+          let duration = Math.round((tend.getTime() - tstart.getTime()) / 1000);
           let success = Object.values(res.results).every((r) => r === "ok");
           lst.push({
             result: res,
