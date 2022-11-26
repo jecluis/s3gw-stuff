@@ -44,21 +44,8 @@ limitations under the License.
           <ng-container *ngIf="!entry.collapsed">
             <tr>
               <td colspan="4">
-                <div class="card">
-                  <table class="table">
-                    <tbody>
-                      <tr *ngFor="let item of entry.result.results|keyvalue"
-                          [ngClass]="{
-                            'alert': true,
-                            'alert-danger': item.value !== 'ok',
-                            'alert-success': item.value === 'ok'
-                          }">
-                        <td scope="row">{{item.key}}</td>
-                        <td scope="row">{{item.value}}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                <s3gw-s3tests-results-list [entry]="entry.result">
+                </s3gw-s3tests-results-list>
               </td>
             </tr>
           </ng-container>
