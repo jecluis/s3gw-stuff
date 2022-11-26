@@ -32,6 +32,7 @@ type S3TestsResultsTableEntry = {
   result: S3TestsResultEntry;
   uuid: string;
   config_name: string;
+  date: Date;
   duration: number;
   status: string;
   collapsed: boolean;
@@ -99,12 +100,15 @@ export class S3TestsResultsComponent implements OnInit, OnDestroy {
             result: res,
             uuid: res.uuid,
             config_name: cfgName,
+            date: tstart,
             duration: duration,
             status: success ? "ok" : "error",
             collapsed: true,
           });
         });
-        this.resultsList = lst;
+        this.resultsList = lst.sort(
+          (a, b) => b.date.getTime() - a.date.getTime(),
+        );
       });
   }
 

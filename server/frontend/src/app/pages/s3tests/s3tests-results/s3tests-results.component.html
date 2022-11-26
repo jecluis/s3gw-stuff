@@ -28,6 +28,7 @@ limitations under the License.
 
     <table class="table table-hover">
       <thead>
+        <th scope="col">Date</th>
         <th scope="col">UUID</th>
         <th scope="col">Config</th>
         <th scope="col">Duration</th>
@@ -36,6 +37,7 @@ limitations under the License.
       <tbody class="table-group-divider">
         <ng-container *ngFor="let entry of resultsList">
           <tr (click)="entry.collapsed = !entry.collapsed">
+            <td scope="row">{{entry.date|date:"MMM d, y, HH:mm:ss"}}</td>
             <td scope="row">{{entry.uuid}}</td>
             <td scope="row">{{entry.config_name}}</td>
             <td scope="row">{{entry.duration}}</td>
@@ -43,7 +45,7 @@ limitations under the License.
           </tr>
           <ng-container *ngIf="!entry.collapsed">
             <tr>
-              <td colspan="4">
+              <td colspan="5">
                 <s3gw-s3tests-results-list [entry]="entry.result">
                 </s3gw-s3tests-results-list>
               </td>
