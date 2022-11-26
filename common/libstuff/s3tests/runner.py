@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from libstuff import podman
 from pydantic import BaseModel, Field
@@ -68,6 +68,17 @@ class ContainerRunConfig(BaseModel):
     config: ContainerConfig
 
 
+class ErrorTestResult(BaseModel):
+    name: str
+    trace: List[str]
+    log: List[str]
+
+
+class TestRunResult(BaseModel):
+    results: List[Tuple[str, str]]
+    errors: Dict[str, ErrorTestResult]
+
+
 class S3TestsRunner:
     name: str
     s3testspath: Path
@@ -100,7 +111,7 @@ class S3TestsRunner:
         containerconf: ContainerRunConfig,
         s3testsconf: TestsConfig,
         progress_cb: Optional[ProgressCB] = None,
-    ) -> List[Tuple[str, str]]:
+    ) -> TestRunResult:
         crconf = containerconf
         cconf = containerconf.config
         ports: List[str] = [f"{crconf.host_port}:{cconf.target_port}"]
@@ -199,7 +210,7 @@ class S3TestsRunner:
         containerconf: ContainerRunConfig,
         s3testsconf: TestsConfig,
         progress_cb: Optional[ProgressCB] = None,
-    ) -> List[Tuple[str, str]]:
+    ) -> TestRunResult:
         self.logger.debug("running s3tests")
         run_cmd = self._get_cmd(
             s3testsconf, port=containerconf.host_port, collect=False
@@ -215,7 +226,7 @@ class S3TestsRunner:
 
         if len(collected.filtered) == 0:
             self.logger.info("no tests to run.")
-            return []
+            return TestRunResult(results=[], errors={})
 
         self.logger.debug(f"running {len(collected.filtered)}")
         results = await self._s3tests_run(
@@ -305,35 +316,100 @@ class S3TestsRunner:
         base_cmd: List[str],
         tests: List[str],
         progress_cb: Optional[ProgressCB] = None,
-    ) -> List[Tuple[str, str]]:
+    ) -> TestRunResult:
         results: List[Tuple[str, str]] = []
+        errors: Dict[str, ErrorTestResult] = {}
 
         def _progress_cb(progress: int) -> None:
             if progress_cb is None:
                 return
             progress_cb(len(tests), progress)
 
-        async def _capture_result(reader: asyncio.StreamReader) -> None:
-            regex = re.compile(
-                f"^{suite}\\.(test_[\\w\\d_-]+)\\s+...\\s+(\\w+).*$"
+        def _handle_test_summary(m: re.Match[str]) -> None:
+            assert len(m.groups()) == 2
+            test = m.group(1)
+            res = m.group(2)
+            assert test.startswith("test_")
+            results.append((test, res.lower()))
+            progress = len(results) * 100 / len(tests)
+            self.logger.debug(f"progress: {progress}%")
+            _progress_cb(len(results))
+
+        async def _handle_test_result(
+            reader: asyncio.StreamReader,
+        ) -> ErrorTestResult:
+            regex_header_end = re.compile("^-+$")
+            regex_test_name = re.compile(
+                f"^[a-zA-Z]+:\\s+{suite}.*\\.(test_.*)$"
             )
+            regex_body_start = re.compile(
+                "^-+ >> begin captured logging << -+$"
+            )
+            regex_body_end = re.compile("^-+ >> end captured logging << -+$")
+            test_name: Optional[str] = None
+
+            line = (await reader.readline()).decode("utf-8").strip("\n")
+            m = re.match(regex_test_name, line)
+            # self.logger.debug(f"header: line: {line}")
+            # self.logger.debug(f"header: test: {m}")
+            assert m is not None
+            assert len(m.groups()) == 1
+            test_name = m.group(1)
+            assert test_name is not None
+
+            line = (await reader.readline()).decode("utf-8").strip("\n")
+            assert re.match(regex_header_end, line) is not None
+
+            trace: List[str] = []
+            body: List[str] = []
+
+            in_body = False
+            in_trace = True
+            async for line in reader:
+                l = line.decode("utf-8").strip("\n")
+                if re.match(regex_body_start, l) is not None:
+                    in_body = True
+                    in_trace = False
+                    continue
+                if re.match(regex_body_end, l) is not None:
+                    break
+                if in_trace:
+                    assert not in_body
+                    trace.append(l)
+                elif in_body:
+                    assert not in_trace
+                    body.append(l)
+
+            return ErrorTestResult(name=test_name, trace=trace, log=body)
+
+        async def _capture_result(reader: asyncio.StreamReader) -> None:
+            test_regex = re.compile(
+                f"^{suite}.*\\.(test_[\\w\\d_-]+)\\s+...\\s+(\\w+).*$"
+            )
+            result_regex_header_start = re.compile("^=+$")
+
             async for line in reader:
                 if self.s3tests_killed:
                     break
 
-                l = line.decode("utf-8")
-                self.logger.debug(line)
-                m = re.match(regex, l)
-                if m is None:
+                l = line.decode("utf-8").strip("\n")
+                # self.logger.debug(f">> {l}")
+
+                m = re.match(test_regex, l)
+                if m is not None:
+                    _handle_test_summary(m)
                     continue
-                assert len(m.groups()) == 2
-                test = m.group(1)
-                res = m.group(2)
-                assert test.startswith("test_")
-                results.append((test, res.lower()))
-                progress = len(results) * 100 / len(tests)
-                self.logger.debug(f"progress: {progress}%")
-                _progress_cb(len(results))
+
+                m = re.match(result_regex_header_start, l)
+                if m is not None:
+                    try:
+                        result = await _handle_test_result(reader)
+                    except Exception as e:
+                        self.logger.error(e)
+                        break
+                    assert result is not None
+                    errors[result.name] = result
+                    continue
 
             self.logger.debug("finished capturing results.")
 
@@ -348,4 +424,4 @@ class S3TestsRunner:
             _capture_result(self.s3tests_proc.stderr),
         )
         await self.s3tests_proc.wait()
-        return results
+        return TestRunResult(results=results, errors=errors)

@@ -10,7 +10,7 @@ from datetime import datetime as dt
 from pathlib import Path
 import random
 import string
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, List, Optional, cast
 from uuid import UUID, uuid4
 
 from controllers.s3tests.config import (
@@ -24,9 +24,11 @@ from libstuff.dbm import DBM
 from libstuff.s3tests.runner import (
     CollectedTests,
     ContainerRunConfig,
+    ErrorTestResult,
     S3TestsRunner,
     S3TestsError,
     RunnerError,
+    TestRunResult,
 )
 from pydantic import BaseModel
 
@@ -87,7 +89,7 @@ class WorkItem:
     _runner: S3TestsRunner
     _config: S3TestsConfigEntry
     _task: Optional[asyncio.Task[None]]
-    _results: List[Tuple[str, str]]
+    _results: TestRunResult
     _is_running: bool
     _is_done: bool
     _is_error: bool
@@ -106,7 +108,7 @@ class WorkItem:
         self._runner = runner
         self._config = config
         self._task = None
-        self._results = []
+        self._results = TestRunResult(results=[], errors={})
         self._is_running = False
         self._is_done = False
         self._is_error = False
@@ -170,7 +172,7 @@ class WorkItem:
 
     @property
     def results(self) -> S3TestRunResult:
-        res = {k: v for k, v in self._results}
+        res = {k: v for k, v in self._results.results}
         return S3TestRunResult(
             uuid=self._uuid,
             time_start=self._time_start,
@@ -181,6 +183,10 @@ class WorkItem:
             config=self._config,
             progress=self.progress,
         )
+
+    @property
+    def errors(self) -> Dict[str, ErrorTestResult]:
+        return self._results.errors
 
     @property
     def uuid(self) -> UUID:
@@ -226,6 +232,7 @@ class S3TestsMgr:
     NS_UUID = "s3tests-config"
     NS_NAME = "s3tests-config-by-name"
     NS_TESTS = "s3tests-results"
+    NS_TESTS_ERRORS = "s3tests-results-errors"
 
     def __init__(self, db: DBM) -> None:
         self._lock = asyncio.Lock()
@@ -309,20 +316,35 @@ class S3TestsMgr:
         )
         return await runner.collect(cfg)
 
+    async def _handle_work_item_results(self) -> None:
+        assert self._work_item is not None
+        assert self._work_item.is_done()
+
+        uuid = self._work_item.uuid
+
+        # handle work item results
+        res = self._work_item.results
+        await self._db.put(ns=self.NS_TESTS, key=str(uuid), value=res)
+        self._results[uuid] = res
+
+        # handle work item errors
+        #  stores them at 's3tests-results-errors/uuid/testname'
+        errors = self._work_item.errors
+        for name, entry in errors.items():
+            key = str(uuid) + "/" + name
+            await self._db.put(ns=self.NS_TESTS_ERRORS, key=key, value=entry)
+
+        self._work_item = None
+        pass
+
     async def _tick(self) -> None:
         while not self._is_shutting_down:
             logger.debug("tick s3tests runner")
             if self._work_item is not None:
-                uuid = self._work_item.uuid
                 if self._work_item.is_done():
-                    res = self._work_item.results
-                    await self._db.put(
-                        ns=self.NS_TESTS, key=str(uuid), value=res
-                    )
-                    self._results[uuid] = res
-                    self._work_item = None
+                    await self._handle_work_item_results()
                 else:
-                    logger.debug(f"work item {uuid} running...")
+                    logger.debug(f"work item {self._work_item.uuid} running...")
 
             await asyncio.sleep(1.0)
 
@@ -426,6 +448,31 @@ class S3TestsMgr:
                 return res
 
         raise NoSuchRunError()
+
+    async def get_errors(self, uuid: UUID) -> Dict[str, ErrorTestResult]:
+        prefix = str(uuid) + "/"
+        res: Dict[str, ErrorTestResult] = cast(
+            Dict[str, ErrorTestResult],
+            await self._db.entries(
+                ns=self.NS_TESTS_ERRORS, prefix=prefix, model=ErrorTestResult
+            ),
+        )
+        entries: Dict[str, ErrorTestResult] = {}
+        for k, v in res.items():
+            assert k.startswith(prefix)
+            name = k[len(prefix) :]
+            entries[name] = v
+
+        return entries
+
+    async def get_error_for(self, uuid: UUID, name: str) -> ErrorTestResult:
+        key = str(uuid) + "/" + name
+        res: Optional[ErrorTestResult] = await self._db.get_model(
+            ns=self.NS_TESTS_ERRORS, key=key, model=ErrorTestResult
+        )
+        if not res:
+            raise NoSuchRunError()
+        return res
 
     @property
     def results(self) -> Dict[UUID, S3TestRunResult]:

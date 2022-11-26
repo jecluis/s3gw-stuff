@@ -22,6 +22,8 @@ from fastapi import Depends, Request, HTTPException, status
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
 
+from libstuff.s3tests.runner import ErrorTestResult
+
 from . import s3tests_mgr
 
 router: APIRouter = APIRouter(prefix="/s3tests", tags=["s3tests"])
@@ -48,6 +50,10 @@ class S3TestsRunStatusReply(S3TestsBaseReply):
     running: bool
     progress: float
     item: S3TestRunResult
+
+
+class S3TestsRunErrorsReply(S3TestsBaseReply):
+    errors: Dict[str, ErrorTestResult]
 
 
 class S3TestsConfigPostReply(S3TestsBaseReply):
@@ -115,6 +121,29 @@ async def get_s3tests_run_status(
     return S3TestsRunStatusReply(
         running=_is_running, progress=_progress, item=res
     )
+
+
+@router.get("/errors", response_model=S3TestsRunErrorsReply)
+async def get_s3tests_run_errors(
+    request: Request,
+    uuid: UUID,
+    name: Optional[str] = None,
+    mgr: S3TestsMgr = Depends(s3tests_mgr),
+) -> S3TestsRunErrorsReply:
+
+    entries: Dict[str, ErrorTestResult] = {}
+
+    if name is not None:
+        try:
+            res = await mgr.get_error_for(uuid, name)
+        except NoSuchRunError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+        entries[res.name] = res
+    else:
+        entries = await mgr.get_errors(uuid)
+
+    return S3TestsRunErrorsReply(errors=entries)
 
 
 @router.post("/config", response_model=S3TestsConfigPostReply)
