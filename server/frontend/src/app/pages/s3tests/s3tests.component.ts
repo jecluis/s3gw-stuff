@@ -13,31 +13,13 @@
  * limitations under the License.
  */
 import { Component, OnDestroy, OnInit } from "@angular/core";
-import {
-  catchError,
-  EMPTY,
-  finalize,
-  Observable,
-  Subscription,
-  take,
-  timer,
-} from "rxjs";
-import {
-  S3TestsAPIService,
-  S3TestsStatusAPIResult,
-} from "~/app/shared/services/api/s3tests-api.service";
+import { Subscription } from "rxjs";
 import {
   S3TestsProgress,
   S3TestsStatus,
   S3TestsStatusService,
 } from "~/app/shared/services/s3tests-status.service";
 import { S3TestsConfigEntry } from "~/app/shared/types/s3tests.type";
-
-type Progress = {
-  total: number;
-  run: number;
-  percent: number;
-};
 
 @Component({
   selector: "s3gw-s3tests",
@@ -50,9 +32,7 @@ export class S3testsComponent implements OnInit, OnDestroy {
   public currentProgress?: S3TestsProgress;
   public currentDuration?: number;
 
-  private statusUpdateInterval = 1000;
   private statusSubscription?: Subscription;
-  private statusRefreshTimerSubscription?: Subscription;
 
   public constructor(private svc: S3TestsStatusService) {}
 
@@ -62,7 +42,6 @@ export class S3testsComponent implements OnInit, OnDestroy {
 
   public ngOnDestroy(): void {
     this.statusSubscription?.unsubscribe();
-    this.statusRefreshTimerSubscription?.unsubscribe();
   }
 
   private refreshStatus(): void {
