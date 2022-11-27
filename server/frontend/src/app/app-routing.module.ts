@@ -1,10 +1,14 @@
 import { NgModule } from "@angular/core";
 import { RouterModule, Routes } from "@angular/router";
+import { S3testsComponent } from "~/app/pages/s3tests/s3tests.component";
 
-const routes: Routes = [];
+const routes: Routes = [
+  { path: "", redirectTo: "s3tests", pathMatch: "full" },
+  { path: "s3tests", component: S3testsComponent },
+];
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes, {useHash: true})],
-  exports: [RouterModule]
+  imports: [RouterModule.forRoot(routes, { useHash: true })],
+  exports: [RouterModule],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}

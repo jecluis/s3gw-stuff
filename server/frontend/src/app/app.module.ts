@@ -6,9 +6,10 @@ import { AppRoutingModule } from "~/app/app-routing.module";
 import { AppComponent } from "~/app/app.component";
 import { PagesModule } from "~/app/pages/pages.module";
 import { SharedModule } from "~/app/shared/shared.module";
+import { MainComponent } from "./main/main.component";
 
 @NgModule({
-  declarations: [AppComponent],
+  declarations: [AppComponent, MainComponent],
   imports: [
     BrowserModule,
     AppRoutingModule,
