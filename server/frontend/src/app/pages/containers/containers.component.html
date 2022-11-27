@@ -1,0 +1,102 @@
+<!--
+Copyright 2022 SUSE, LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<div class="container-fluid">
+
+  <div class="row border-bottom border-3" style="height: 70px">
+    <div class="col-12">
+      <div class="d-flex flex-row align-items-center h-100 px-2">
+        <h5 class="fw-bold text-uppercase">containers</h5>
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-content-center">
+    <div class="col-12 col-xxl-6">
+      <div class="p-5">
+
+        <!-- "running" card here -->
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">
+              <i class="mdi mdi-docker me-1"></i>
+              Active
+            </h5>
+
+            <table class="table table-hover">
+              <thead>
+                <th scope="col">Name</th>
+                <th scope="col">Image</th>
+                <th scope="col">Started At</th>
+              </thead>
+              <tbody class="table-group-divider">
+                <ng-container *ngFor="let entry of running">
+                  <tr>
+                    <td scope="row">{{entry.names[0]}}</td>
+                    <td scope="row">
+                      {{entry.image_name.name}}:{{entry.image_name.tag}}
+                    </td>
+                    <td scope="row">{{entry.started}}</td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="row justify-concent-center">
+    <div class="col-12 col-xxl-6">
+      <div class="p-5">
+
+        <!-- "stopped" card here -->
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">
+              <i class="mdi mdi-docker me-1"></i>
+              Stopped
+            </h5>
+
+            <table class="table table-hover">
+              <thead>
+                <th scope="col">Name</th>
+                <th scope="col">Image</th>
+                <th scope="col">State</th>
+              </thead>
+              <tbody class="table-group-divider">
+                <ng-container *ngFor="let entry of stopped">
+                  <tr>
+                    <td scope="row">{{entry.names[0]}}</td>
+                    <td scope="row">
+                      {{entry.image_name.name}}:{{entry.image_name.tag}}
+                    </td>
+                    <td scope="row">{{entry.state}}</td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
+          </div>
+
+
+        </div>
+      </div>
+    </div>
+
+  </div>

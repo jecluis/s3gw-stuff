@@ -24,6 +24,7 @@ import { S3TestsResultsComponent } from "~/app/pages/s3tests/s3tests-results/s3t
 import { S3TestsResultsListComponent } from "~/app/pages/s3tests/s3tests-results-list/s3tests-results-list.component";
 import { S3TestsResultsErrorViewComponent } from "~/app/pages/s3tests/s3tests-results-error-view/s3tests-results-error-view.component";
 import { AppRoutingModule } from "../app-routing.module";
+import { ContainersComponent } from "~/app/pages/containers/containers.component";
 
 @NgModule({
   declarations: [
@@ -33,6 +34,7 @@ import { AppRoutingModule } from "../app-routing.module";
     S3TestsResultsComponent,
     S3TestsResultsListComponent,
     S3TestsResultsErrorViewComponent,
+    ContainersComponent,
   ],
   imports: [
     CommonModule,
