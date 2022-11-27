@@ -19,6 +19,7 @@ type TestEntry = {
   name: string;
   status: string;
   isError: boolean;
+  statusType: string;
   collapsed: boolean;
 };
 
@@ -33,6 +34,7 @@ export class S3TestsResultsListComponent implements OnInit {
 
   public tests: { [name: string]: TestEntry } = {};
   public uuid!: string;
+  public selected: string = "all";
 
   public constructor() {}
 
@@ -45,6 +47,7 @@ export class S3TestsResultsListComponent implements OnInit {
         name: name,
         status: res,
         isError: res !== "ok",
+        statusType: res !== "ok" ? "error" : "ok",
         collapsed: true,
       };
     });

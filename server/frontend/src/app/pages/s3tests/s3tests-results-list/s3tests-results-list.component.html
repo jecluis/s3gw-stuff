@@ -15,6 +15,17 @@ limitations under the License.
 -->
 
 <div class="card">
+  <div class="card-header">
+    <button class="btn btn-sm" type="button" (click)="selected = 'all'"
+            [class.btn-outline-secondary]="selected !== 'all'"
+            [class.btn-secondary]="selected === 'all'">All</button>
+    <button class="ms-2 btn btn-sm" type="button" (click)="selected = 'ok'"
+            [class.btn-outline-success]="selected !== 'ok'"
+            [class.btn-success]="selected === 'ok'">OK</button>
+    <button class="ms-2 btn btn-sm" type="button" (click)="selected = 'error'"
+            [class.btn-outline-danger]="selected !== 'error'"
+            [class.btn-danger]="selected === 'error'">Error</button>
+  </div>
   <table class="table">
     <tbody>
       <ng-container *ngFor="let item of tests|keyvalue">
@@ -22,11 +33,13 @@ limitations under the License.
               'alert': true,
               'alert-danger': item.value.isError,
               'alert-success': !item.value.isError
-            }" (click)="item.value.collapsed = !item.value.collapsed">
+            }" (click)="item.value.collapsed = !item.value.collapsed"
+            *ngIf="selected === 'all' || item.value.statusType === selected">
           <td scope="row">{{item.key}}</td>
           <td scope="row">{{item.value.status}}</td>
         </tr>
-        <ng-container *ngIf="!item.value.collapsed && item.value.isError">
+        <ng-container
+                      *ngIf="!item.value.collapsed && item.value.isError && (selected === 'all' || item.value.statusType === selected)">
           <tr>
             <td colspan="2">
               <s3gw-s3tests-results-error-view [uuid]="uuid" [name]="item.key">
