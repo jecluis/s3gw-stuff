@@ -7,7 +7,6 @@
 
 from datetime import datetime as dt
 from typing import List
-from uuid import UUID
 
 from fastapi import Request, HTTPException, status
 from fastapi.routing import APIRouter
