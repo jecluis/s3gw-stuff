@@ -286,3 +286,18 @@ async def stop(*, id: Optional[str] = None, name: Optional[str] = None) -> None:
 async def is_running(id: str) -> bool:
     res = await inspect(id)
     return res.running
+
+
+async def logs(id: str) -> str:
+    cmd = ["podman", "logs", id]
+    proc = await asyncio.subprocess.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    retcode = await proc.wait()
+    if retcode != 0:
+        raise PodmanError()
+
+    assert proc.stdout is not None
+    return (await proc.stdout.read()).decode("utf-8")
