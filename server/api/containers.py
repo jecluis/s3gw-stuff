@@ -7,8 +7,9 @@
 
 from datetime import datetime as dt
 from typing import List
+from uuid import UUID
 
-from fastapi import Request
+from fastapi import Request, HTTPException, status
 from fastapi.routing import APIRouter
 from libstuff import podman
 from pydantic import BaseModel
@@ -21,6 +22,19 @@ class ContainerPSReply(BaseModel):
     result: List[podman.PodmanContainer]
 
 
+class ContainerLogsReply(BaseModel):
+    date: dt
+    logs: str
+
+
 @router.get("/ps", response_model=ContainerPSReply)
 async def get_ps(request: Request) -> ContainerPSReply:
     return ContainerPSReply(date=dt.now(), result=await podman.ps())
+
+
+@router.get("/logs", response_model=ContainerLogsReply)
+async def get_logs(request: Request, id: str) -> ContainerLogsReply:
+    try:
+        return ContainerLogsReply(date=dt.now(), logs=await podman.logs(id))
+    except podman.PodmanError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)

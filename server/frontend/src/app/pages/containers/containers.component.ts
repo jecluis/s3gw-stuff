@@ -13,11 +13,30 @@
  * limitations under the License.
  */
 import { Component, OnDestroy, OnInit } from "@angular/core";
-import { Subscription } from "rxjs";
+import { catchError, EMPTY, finalize, Subscription } from "rxjs";
 import {
   ContainerEntry,
   ContainersService,
 } from "~/app/shared/services/containers.service";
+
+type EntryInfo = {
+  hasLogs: boolean;
+  obtainingLogs: boolean;
+  errorObtainingLogs: boolean;
+  isCollapsed: boolean;
+};
+
+type ContainerTableEntry = {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  command: string;
+  startedAt: Date;
+  createdAt: Date;
+  isRunning: boolean;
+  info: EntryInfo;
+};
 
 @Component({
   selector: "s3gw-containers",
@@ -25,8 +44,11 @@ import {
   styleUrls: ["./containers.component.scss"],
 })
 export class ContainersComponent implements OnInit, OnDestroy {
-  public running: ContainerEntry[] = [];
-  public stopped: ContainerEntry[] = [];
+  public running: ContainerTableEntry[] = [];
+  public stopped: ContainerTableEntry[] = [];
+
+  public entryByID: { [id: string]: ContainerTableEntry } = {};
+  public logs: { [id: string]: string } = {};
 
   private containersSubscription?: Subscription;
 
@@ -49,18 +71,92 @@ export class ContainersComponent implements OnInit, OnDestroy {
   }
 
   private update(entries: ContainerEntry[]): void {
-    const running: ContainerEntry[] = [];
-    const stopped: ContainerEntry[] = [];
+    const entriesByID: { [id: string]: ContainerEntry } = {};
 
     entries.forEach((entry: ContainerEntry) => {
-      if (entry.running) {
+      const tableEntry: ContainerTableEntry = {
+        id: entry.id,
+        name: entry.names[0],
+        image: `${entry.image_name.name}:${entry.image_name.tag}`,
+        state: entry.state,
+        command: entry.command.join(),
+        createdAt: new Date(entry.created),
+        startedAt: new Date(entry.started),
+        isRunning: entry.running,
+        info: {
+          errorObtainingLogs: false,
+          hasLogs: false,
+          obtainingLogs: false,
+          isCollapsed: true,
+        },
+      };
+
+      entriesByID[entry.id] = entry;
+      if (entry.id in this.entryByID) {
+        const existing = this.entryByID[entry.id];
+        if (existing.state === entry.state) {
+          return;
+        }
+      }
+      this.entryByID[entry.id] = tableEntry;
+    });
+
+    Object.keys(this.entryByID).forEach((id: string) => {
+      if (!(id in entriesByID)) {
+        delete this.entryByID[id];
+      }
+    });
+
+    const running: ContainerTableEntry[] = [];
+    const stopped: ContainerTableEntry[] = [];
+    Object.keys(this.entryByID).forEach((id: string) => {
+      const entry = this.entryByID[id];
+      if (entry.isRunning) {
         running.push(entry);
       } else {
         stopped.push(entry);
       }
     });
 
-    this.running = running;
-    this.stopped = stopped;
+    this.running = running.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+    this.stopped = stopped.sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+  }
+
+  public toggleEntry(entry: ContainerTableEntry): void {
+    const info = entry.info;
+    info.isCollapsed = !info.isCollapsed;
+    if (info.isCollapsed) {
+      return;
+    }
+
+    if (!info.hasLogs && !info.obtainingLogs) {
+      info.obtainingLogs = true;
+      this.obtainLogs(entry);
+    }
+  }
+
+  private obtainLogs(entry: ContainerTableEntry): void {
+    const sub: Subscription = this.svc
+      .getLogs(entry.id)
+      .pipe(
+        catchError((err) => {
+          console.error(`error obtaining logs for ${entry.id}: `, err);
+          entry.info.errorObtainingLogs = true;
+          return EMPTY;
+        }),
+        finalize(() => {
+          entry.info.obtainingLogs = false;
+          sub.unsubscribe();
+        }),
+      )
+      .subscribe((logs: string) => {
+        entry.info.hasLogs = true;
+        entry.info.errorObtainingLogs = false;
+        this.logs[entry.id] = logs;
+      });
   }
 }

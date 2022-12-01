@@ -18,6 +18,8 @@ import {
   catchError,
   EMPTY,
   finalize,
+  map,
+  Observable,
   Subscription,
   take,
   timer,
@@ -42,6 +44,11 @@ export type ContainerEntry = {
 type ContainersPSAPIResult = {
   date: string;
   result: ContainerEntry[];
+};
+
+type ContainersLogsAPIResult = {
+  date: string;
+  logs: string;
 };
 
 @Injectable({
@@ -90,5 +97,16 @@ export class ContainersService implements OnDestroy {
 
   public get containers(): BehaviorSubject<ContainerEntry[]> {
     return this.listSubject;
+  }
+
+  public getLogs(id: string): Observable<string> {
+    return this.api
+      .get<ContainersLogsAPIResult>("/containers/logs", {
+        params: { id: id },
+      })
+      .pipe(
+        take(1),
+        map((res: ContainersLogsAPIResult) => res.logs),
+      );
   }
 }
