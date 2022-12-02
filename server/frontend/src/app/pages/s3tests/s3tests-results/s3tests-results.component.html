@@ -33,6 +33,7 @@ limitations under the License.
         <th scope="col">Config</th>
         <th scope="col">Duration</th>
         <th scope="col">Status</th>
+        <th scope="col">Passed</th>
       </thead>
       <tbody class="table-group-divider">
         <ng-container *ngFor="let entry of resultsList">
@@ -42,10 +43,11 @@ limitations under the License.
             <td scope="row">{{entry.config_name}}</td>
             <td scope="row">{{entry.duration}} s</td>
             <td scope="row">{{entry.status}}</td>
+            <td scope="row">{{entry.passed}}/{{entry.total}}</td>
           </tr>
           <ng-container *ngIf="!entry.collapsed">
             <tr>
-              <td colspan="5">
+              <td colspan="6">
                 <s3gw-s3tests-results-list [entry]="entry.result">
                 </s3gw-s3tests-results-list>
               </td>

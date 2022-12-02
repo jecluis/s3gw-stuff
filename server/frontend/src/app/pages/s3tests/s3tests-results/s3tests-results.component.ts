@@ -35,6 +35,8 @@ type S3TestsResultsTableEntry = {
   date: Date;
   duration: number;
   status: string;
+  passed: number;
+  total: number;
   collapsed: boolean;
 };
 
@@ -96,6 +98,12 @@ export class S3TestsResultsComponent implements OnInit, OnDestroy {
           let tend: Date = new Date(res.time_end);
           let duration = Math.round((tend.getTime() - tstart.getTime()) / 1000);
           let success = Object.values(res.results).every((r) => r === "ok");
+          let passed = 0;
+          Object.keys(res.results).forEach((_k: string) => {
+            if (res.results[_k] === "ok") {
+              ++passed;
+            }
+          });
           lst.push({
             result: res,
             uuid: res.uuid,
@@ -104,6 +112,8 @@ export class S3TestsResultsComponent implements OnInit, OnDestroy {
             duration: duration,
             status: success ? "ok" : "error",
             collapsed: true,
+            passed: passed,
+            total: Object.keys(res.results).length,
           });
         });
         this.resultsList = lst.sort(

@@ -35,6 +35,9 @@ export class S3TestsResultsListComponent implements OnInit {
   public tests: { [name: string]: TestEntry } = {};
   public uuid!: string;
   public selected: string = "all";
+  public total: number = 0;
+  public passed: number = 0;
+  public failed: number = 0;
 
   public constructor() {}
 
@@ -43,11 +46,19 @@ export class S3TestsResultsListComponent implements OnInit {
 
     Object.keys(this.entry.results).forEach((name: string) => {
       const res = this.entry.results[name];
+      const isError = res !== "ok";
+      ++this.total;
+      if (isError) {
+        ++this.failed;
+      } else {
+        ++this.passed;
+      }
+
       this.tests[name] = {
         name: name,
         status: res,
-        isError: res !== "ok",
-        statusType: res !== "ok" ? "error" : "ok",
+        isError: isError,
+        statusType: isError ? "error" : "ok",
         collapsed: true,
       };
     });

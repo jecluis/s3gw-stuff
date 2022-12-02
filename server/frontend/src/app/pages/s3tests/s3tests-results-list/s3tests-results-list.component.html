@@ -18,13 +18,15 @@ limitations under the License.
   <div class="card-header">
     <button class="btn btn-sm" type="button" (click)="selected = 'all'"
             [class.btn-outline-secondary]="selected !== 'all'"
-            [class.btn-secondary]="selected === 'all'">All</button>
+            [class.btn-secondary]="selected === 'all'">All ({{total}})</button>
     <button class="ms-2 btn btn-sm" type="button" (click)="selected = 'ok'"
             [class.btn-outline-success]="selected !== 'ok'"
-            [class.btn-success]="selected === 'ok'">OK</button>
+            [class.btn-success]="selected === 'ok'">OK ({{passed}})</button>
     <button class="ms-2 btn btn-sm" type="button" (click)="selected = 'error'"
             [class.btn-outline-danger]="selected !== 'error'"
-            [class.btn-danger]="selected === 'error'">Error</button>
+            [class.btn-danger]="selected === 'error'">
+      Error ({{failed}})
+    </button>
   </div>
   <table class="table">
     <tbody>
