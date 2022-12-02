@@ -369,7 +369,6 @@ class S3TestsMgr:
             isodate = dt.now().isoformat()
             run_name = f"s3tests-{isodate}"
 
-            _config = cfg.desc.config
             runner: S3TestsRunner = S3TestsRunner(
                 run_name,
                 self._s3tests_path,
@@ -401,14 +400,6 @@ class S3TestsMgr:
         async with self._configs_lock:
             return list(self._configs.values())
 
-        entries = await self._db.entries(
-            ns=self.NS_UUID, model=S3TestsConfigEntry
-        )
-        lst: List[S3TestsConfigEntry] = [
-            cast(S3TestsConfigEntry, v) for v in entries.values()
-        ]
-        return lst
-
     async def config_get(
         self, *, name: Optional[str] = None, uuid: Optional[UUID] = None
     ) -> S3TestsConfigItem:
@@ -428,14 +419,6 @@ class S3TestsMgr:
                 raise NoSuchConfigError()
 
             return self._configs[_uuid]
-
-        cfg: Optional[S3TestsConfigEntry] = await self._db.get_model(
-            ns=self.NS_UUID, key=str(_uuid), model=S3TestsConfigEntry
-        )
-        if cfg is None:
-            raise NoSuchConfigError()
-
-        return cfg
 
     def get_run(self, uuid: UUID) -> S3TestRunResult:
         if uuid in self._results:
