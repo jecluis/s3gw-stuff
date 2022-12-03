@@ -396,6 +396,5 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
     };
 
     info.data = [passedTrace, failedTrace, errorTrace];
-    console.log("plot data: ", this.plotDataByUUID[uuid]);
   }
 }
