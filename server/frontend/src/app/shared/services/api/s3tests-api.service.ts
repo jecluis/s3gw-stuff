@@ -54,6 +54,21 @@ export type S3TestsErrorsAPIGetResult = {
   errors: { [name: string]: S3TestsErrorEntry };
 };
 
+export type S3TestsConfigResult = {
+  date: string;
+  config_uuid: string;
+  result_uuid: string;
+  duration: number;
+  passed: number;
+  error: number;
+  failed: number;
+};
+
+type S3TestsConfigResultsGetAPIResult = {
+  date: string;
+  results: S3TestsConfigResult[];
+};
+
 type S3TestsRunAPIResult = {
   date: string;
   uuid: string;
@@ -112,6 +127,19 @@ export class S3TestsAPIService {
             throw new Error("unknown test");
           }
           return entry.errors[name];
+        }),
+      );
+  }
+
+  public getConfigResults(uuid: string): Observable<S3TestsConfigResult[]> {
+    return this.svc
+      .get<S3TestsConfigResultsGetAPIResult>("/s3tests/config/results", {
+        params: { uuid: uuid },
+      })
+      .pipe(
+        take(1),
+        map((res: S3TestsConfigResultsGetAPIResult) => {
+          return res.results;
         }),
       );
   }

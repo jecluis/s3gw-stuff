@@ -37,12 +37,26 @@ limitations under the License.
       </thead>
       <tbody class="table-group-divider">
         <ng-container *ngFor="let entry of configList">
-          <tr (click)="entry.collapsed = !entry.collapsed">
+          <tr (click)="toggleEntry(entry)">
             <td scope="row">{{entry.config.desc.name}}</td>
             <td scope="row">{{entry.config.uuid}}</td>
             <td scope="row">{{entry.runnableUnits}}/{{entry.totalUnits}}</td>
           </tr>
           <ng-container *ngIf="!entry.collapsed">
+            <tr>
+              <td colspan="3">
+                <div class="card">
+                  <div class="text-info"
+                       *ngIf="plotDataByUUID[entry.config.uuid].obtaining">
+                    Obtaining data...
+                  </div>
+                  <s3gw-plotly *ngIf="plotDataByUUID[entry.config.uuid].hasPlotData"
+                               [data]="plotDataByUUID[entry.config.uuid].data"
+                               [layout]="{barmode: 'stack'}">
+                  </s3gw-plotly>
+                </div>
+              </td>
+            </tr>
             <tr>
               <td colspan="3">
                 <s3gw-config-view [config]="entry.config" [busy]="isRunning">

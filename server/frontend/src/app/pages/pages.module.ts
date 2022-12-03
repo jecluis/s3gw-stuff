@@ -25,6 +25,7 @@ import { S3TestsResultsListComponent } from "~/app/pages/s3tests/s3tests-results
 import { S3TestsResultsErrorViewComponent } from "~/app/pages/s3tests/s3tests-results-error-view/s3tests-results-error-view.component";
 import { AppRoutingModule } from "../app-routing.module";
 import { ContainersComponent } from "~/app/pages/containers/containers.component";
+import { SharedModule } from "~/app/shared/shared.module";
 
 @NgModule({
   declarations: [
@@ -42,6 +43,7 @@ import { ContainersComponent } from "~/app/pages/containers/containers.component
     BrowserAnimationsModule,
     NgbCollapseModule,
     ReactiveFormsModule,
+    SharedModule,
   ],
   exports: [S3testsComponent],
 })

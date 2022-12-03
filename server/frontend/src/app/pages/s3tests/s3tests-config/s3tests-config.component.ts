@@ -31,10 +31,12 @@ import {
   Subscription,
   take,
 } from "rxjs";
+import * as Plotly from "plotly.js-dist-min";
 import {
   S3TestsAPIService,
   S3TestsConfigAPIPostResult,
   S3TestsConfigAPIResult,
+  S3TestsConfigResult,
 } from "~/app/shared/services/api/s3tests-api.service";
 import {
   S3TestsStatus,
@@ -45,12 +47,19 @@ import {
   S3TestsConfigEntry,
   S3TestsConfigItem,
 } from "~/app/shared/types/s3tests.type";
+import { DatePipe } from "@angular/common";
 
 type S3TestsConfigTableEntry = {
   config: S3TestsConfigEntry;
   totalUnits: number;
   runnableUnits: number;
   collapsed: boolean;
+};
+
+type PlotDataInfo = {
+  hasPlotData: boolean;
+  obtaining: boolean;
+  data: Plotly.Data[];
 };
 
 @Component({
@@ -89,6 +98,20 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   public errorOnConfigSubmit: boolean = false;
   public submittingConfig: boolean = false;
   public isRunning: boolean = false;
+
+  public plotDataByUUID: { [id: string]: PlotDataInfo } = {};
+
+  public plotData: Plotly.Data[] = [
+    {
+      x: [1, 2, 3],
+      y: [2, 6, 3],
+      type: "scatter",
+      mode: "lines+markers",
+      marker: { color: "red" },
+      name: "foo",
+    },
+    { x: [1, 2, 3], y: [2, 5, 3], type: "bar" },
+  ];
 
   private defaultConfigContents = {
     container: {
@@ -142,6 +165,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
       .subscribe((cfg: S3TestsConfigAPIResult) => {
         this.errorOnLoadingConfig = false;
         let lst: S3TestsConfigTableEntry[] = [];
+        const plotData: { [id: string]: PlotDataInfo } = {};
         cfg.entries.forEach((e: S3TestsConfigItem) => {
           lst.push({
             config: e.config,
@@ -149,7 +173,13 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
             runnableUnits: e.tests.filtered.length,
             collapsed: true,
           });
+          plotData[e.config.uuid] = {
+            hasPlotData: false,
+            obtaining: false,
+            data: [],
+          };
         });
+        this.plotDataByUUID = plotData;
         this.configList = lst;
         this.configListLastUpdated = cfg.date;
         console.log("reload @ ", cfg.date);
@@ -277,5 +307,91 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   }
   public get configContents() {
     return this.newForm.configContents;
+  }
+
+  public toggleEntry(entry: S3TestsConfigTableEntry): void {
+    entry.collapsed = !entry.collapsed;
+    if (!entry.collapsed) {
+      this.plotResults(entry.config.uuid);
+    }
+  }
+
+  public plotResults(uuid: string): void {
+    console.assert(uuid in this.plotDataByUUID);
+    const info = this.plotDataByUUID[uuid];
+    if (info.hasPlotData) {
+      return;
+    }
+    this.svc
+      .getConfigResults(uuid)
+      .pipe(
+        take(1),
+        catchError((err) => {
+          info.hasPlotData = false;
+          console.error(`error obtaining plot data for ${uuid}: `, err);
+          return EMPTY;
+        }),
+        finalize(() => {
+          info.obtaining = false;
+        }),
+      )
+      .subscribe((res: S3TestsConfigResult[]) => {
+        this.processPlotData(uuid, res);
+        info.hasPlotData = true;
+      });
+  }
+
+  private processPlotData(uuid: string, res: S3TestsConfigResult[]): void {
+    console.assert(uuid in this.plotDataByUUID);
+    const info = this.plotDataByUUID[uuid];
+
+    const x: string[] = [];
+    const error: number[] = [];
+    const failed: number[] = [];
+    const passed: number[] = [];
+
+    const nByDate: { [id: string]: number } = {};
+    const datepipe: DatePipe = new DatePipe("en-US");
+    res.forEach((entry: S3TestsConfigResult) => {
+      const date = new Date(entry.date);
+      let datestr = datepipe.transform(date, "MMM d");
+      if (!(datestr! in nByDate)) {
+        nByDate[datestr!] = 0;
+      }
+      nByDate[datestr!]++;
+      if (nByDate[datestr!] > 1) {
+        datestr = `${datestr} (${nByDate[datestr!]})`;
+      }
+      x.push(datestr!);
+      error.push(entry.error);
+      failed.push(entry.failed);
+      passed.push(entry.passed);
+    });
+
+    const errorTrace: Plotly.Data = {
+      name: "error",
+      marker: { color: "red" },
+      type: "bar",
+      x: x,
+      y: error,
+    };
+    const failedTrace: Plotly.Data = {
+      name: "failed",
+      marker: { color: "orange" },
+      type: "bar",
+      x: x,
+      y: failed,
+    };
+    const passedTrace: Plotly.Data = {
+      name: "passed",
+      marker: { color: "green" },
+      type: "bar",
+      x: x,
+      y: passed,
+    };
+
+    info.data = [passedTrace, failedTrace, errorTrace];
+
+    console.log("plot data: ", this.plotDataByUUID[uuid]);
   }
 }
