@@ -71,6 +71,16 @@ class S3TestsConfigItem(BaseModel):
     tests: CollectedTests
 
 
+class S3TestsResultSummary(BaseModel):
+    date: dt
+    config_uuid: UUID
+    result_uuid: UUID
+    duration: int
+    passed: int
+    error: int
+    failed: int
+
+
 def _gen_random_container_name() -> str:
     rnd = "".join(random.choices(string.ascii_lowercase, k=4))
     ts = dt.now().isoformat(timespec="minutes")
@@ -201,6 +211,10 @@ class WorkItem:
             progress=self.progress,
         )
 
+    @property
+    def config(self) -> UUID:
+        return self._config.uuid
+
     def is_running(self) -> bool:
         return self._is_running and not self._is_done
 
@@ -233,6 +247,7 @@ class S3TestsMgr:
     NS_NAME = "s3tests-config-by-name"
     NS_TESTS = "s3tests-results"
     NS_TESTS_ERRORS = "s3tests-results-errors"
+    NS_TESTS_CONFIG_RESULTS = "s3tests-config-results"
 
     def __init__(self, db: DBM) -> None:
         self._lock = asyncio.Lock()
@@ -333,6 +348,33 @@ class S3TestsMgr:
         for name, entry in errors.items():
             key = str(uuid) + "/" + name
             await self._db.put(ns=self.NS_TESTS_ERRORS, key=key, value=entry)
+
+        # store association between config and the results
+        config_uuid = self._work_item.config
+        k = f"{config_uuid}/{uuid}"
+
+        resdict: Dict[str, int] = {"ok": 0, "error": 0, "fail": 0}
+        for _, r in res.results.items():
+            if r not in resdict:
+                logger.error(f"unknown result '{r}'.")
+                continue
+            resdict[r] = resdict[r] + 1
+
+        assert res.time_end is not None
+        assert res.time_start is not None
+        dur = res.time_end - res.time_start
+        summary = S3TestsResultSummary(
+            date=res.time_start,
+            config_uuid=config_uuid,
+            result_uuid=uuid,
+            duration=dur.seconds,
+            passed=resdict["ok"],
+            error=resdict["error"],
+            failed=resdict["fail"],
+        )
+        await self._db.put(
+            ns=self.NS_TESTS_CONFIG_RESULTS, key=k, value=summary
+        )
 
         self._work_item = None
         pass
@@ -456,6 +498,26 @@ class S3TestsMgr:
         if not res:
             raise NoSuchRunError()
         return res
+
+    async def get_config_results(
+        self, uuid: UUID
+    ) -> List[S3TestsResultSummary]:
+
+        entries: Dict[str, S3TestsResultSummary] = cast(
+            Dict[str, S3TestsResultSummary],
+            await self._db.entries(
+                ns=self.NS_TESTS_CONFIG_RESULTS,
+                prefix=str(uuid),
+                model=S3TestsResultSummary,
+            ),
+        )
+
+        def _sort(x: S3TestsResultSummary) -> float:
+            return x.date.timestamp()
+
+        lst: List[S3TestsResultSummary] = list(entries.values())
+        lst.sort(key=_sort)
+        return lst
 
     @property
     def results(self) -> Dict[UUID, S3TestRunResult]:
