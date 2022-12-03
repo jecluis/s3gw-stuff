@@ -322,6 +322,7 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
     if (info.hasPlotData) {
       return;
     }
+    info.obtaining = true;
     this.svc
       .getConfigResults(uuid)
       .pipe(
@@ -336,6 +337,10 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
         }),
       )
       .subscribe((res: S3TestsConfigResult[]) => {
+        if (res.length == 0) {
+          console.debug(`No data to plot for config ${uuid}`);
+          return;
+        }
         this.processPlotData(uuid, res);
         info.hasPlotData = true;
       });
@@ -391,7 +396,6 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
     };
 
     info.data = [passedTrace, failedTrace, errorTrace];
-
     console.log("plot data: ", this.plotDataByUUID[uuid]);
   }
 }

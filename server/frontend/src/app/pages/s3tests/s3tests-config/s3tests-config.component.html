@@ -45,11 +45,15 @@ limitations under the License.
           <ng-container *ngIf="!entry.collapsed">
             <tr>
               <td colspan="3">
+                <div class="alert alert-info"
+                     *ngIf="plotDataByUUID[entry.config.uuid].obtaining">
+                  Obtaining data...
+                </div>
+                <div class="alert alert-info"
+                     *ngIf="!plotDataByUUID[entry.config.uuid].hasPlotData && !plotDataByUUID[entry.config.uuid].obtaining">
+                  No results available to plot.
+                </div>
                 <div class="card">
-                  <div class="text-info"
-                       *ngIf="plotDataByUUID[entry.config.uuid].obtaining">
-                    Obtaining data...
-                  </div>
                   <s3gw-plotly *ngIf="plotDataByUUID[entry.config.uuid].hasPlotData"
                                [data]="plotDataByUUID[entry.config.uuid].data"
                                [layout]="{barmode: 'stack'}">
