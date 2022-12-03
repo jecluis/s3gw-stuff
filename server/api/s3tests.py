@@ -17,6 +17,7 @@ from controllers.s3tests.mgr import (
     S3TestRunResult,
     NoSuchConfigError,
     NoSuchRunError,
+    S3TestsResultSummary,
 )
 from fastapi import Depends, Request, HTTPException, status
 from fastapi.routing import APIRouter
@@ -62,6 +63,10 @@ class S3TestsConfigPostReply(S3TestsBaseReply):
 
 class S3TestsConfigGetReply(S3TestsBaseReply):
     entries: List[S3TestsConfigItem]
+
+
+class S3TestsConfigGetResultsReply(S3TestsBaseReply):
+    results: List[S3TestsResultSummary]
 
 
 @router.get("/results", response_model=S3TestsResultsReply)
@@ -180,3 +185,12 @@ async def get_config(
     else:
         lst = await mgr.config_list()
     return S3TestsConfigGetReply(date=dt.now(), entries=lst)
+
+
+@router.get("/config/results", response_model=S3TestsConfigGetResultsReply)
+async def get_config_results(
+    request: Request, uuid: UUID, mgr: S3TestsMgr = Depends(s3tests_mgr)
+) -> S3TestsConfigGetResultsReply:
+
+    res = await mgr.get_config_results(uuid)
+    return S3TestsConfigGetResultsReply(date=dt.now(), results=res)
