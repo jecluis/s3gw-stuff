@@ -26,6 +26,7 @@ import { S3TestsResultsErrorViewComponent } from "~/app/pages/s3tests/s3tests-re
 import { AppRoutingModule } from "../app-routing.module";
 import { ContainersComponent } from "~/app/pages/containers/containers.component";
 import { SharedModule } from "~/app/shared/shared.module";
+import { ConfigResultsPlotComponent } from './s3tests/config-results-plot/config-results-plot.component';
 
 @NgModule({
   declarations: [
@@ -36,6 +37,7 @@ import { SharedModule } from "~/app/shared/shared.module";
     S3TestsResultsListComponent,
     S3TestsResultsErrorViewComponent,
     ContainersComponent,
+    ConfigResultsPlotComponent,
   ],
   imports: [
     CommonModule,
