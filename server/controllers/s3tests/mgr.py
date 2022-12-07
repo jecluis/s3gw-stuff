@@ -19,7 +19,7 @@ from controllers.s3tests.config import (
 )
 from fastapi.logger import logger
 from libstuff import git
-from common.error import ServerError
+from common.error import NoSuchConfigError, NoSuchRunError, ServerError
 from libstuff.dbm import DBM
 from libstuff.s3tests.runner import (
     CollectedTests,
@@ -31,14 +31,6 @@ from libstuff.s3tests.runner import (
     TestRunResult,
 )
 from pydantic import BaseModel
-
-
-class NoSuchConfigError(ServerError):
-    pass
-
-
-class NoSuchRunError(ServerError):
-    pass
 
 
 class S3TestRunProgress(BaseModel):

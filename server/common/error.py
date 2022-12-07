@@ -20,3 +20,11 @@ class ServerError(Exception):
     @property
     def msg(self) -> str:
         return "" if self._msg is None else self._msg
+
+
+class NoSuchConfigError(ServerError):
+    pass
+
+
+class NoSuchRunError(ServerError):
+    pass
