@@ -9,6 +9,8 @@ from controllers.context import ServerContext
 from controllers.s3tests.mgr import S3TestsMgr
 from fastapi import Request
 
+from controllers.bench.mgr import BenchmarkMgr
+
 
 class APIServerContext:
     def __init__(self) -> None:
@@ -28,5 +30,15 @@ class APIS3TestsMgr:
         return ctx.s3tests
 
 
+class APIBenchMgr:
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, request: Request) -> BenchmarkMgr:
+        ctx: ServerContext = request.app.state.ctx
+        return ctx.bench
+
+
 server_context = APIServerContext()
 s3tests_mgr = APIS3TestsMgr()
+bench_mgr = APIBenchMgr()

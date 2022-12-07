@@ -7,14 +7,17 @@
 
 from pathlib import Path
 
+from fastapi.logger import logger
 from libstuff.dbm import DBM
 from controllers.config import ServerConfig
 from controllers.s3tests.mgr import S3TestsMgr
+from controllers.bench.mgr import BenchmarkMgr
 
 
 class ServerContext:
 
     _s3tests: S3TestsMgr
+    _bench: BenchmarkMgr
     _config: ServerConfig
     _db: DBM
 
@@ -23,15 +26,20 @@ class ServerContext:
         _dbpath = Path("./server.db").resolve()
         self._db = DBM(_dbpath)
         self._s3tests = S3TestsMgr(self._db)
+        self._bench = BenchmarkMgr(self._db, logger)
 
     async def start(self) -> None:
         await self._s3tests.start()
-        pass
+        await self._bench.start()
 
     async def stop(self) -> None:
         await self._s3tests.stop()
-        pass
+        await self._bench.stop()
 
     @property
     def s3tests(self) -> S3TestsMgr:
         return self._s3tests
+
+    @property
+    def bench(self) -> BenchmarkMgr:
+        return self._bench
