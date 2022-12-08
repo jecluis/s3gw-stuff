@@ -46,6 +46,11 @@ class BenchConfig(BaseModel):
     targets: Dict[str, BenchTarget]
 
 
+class BenchConfigDesc(BaseModel):
+    uuid: UUID
+    config: BenchConfig
+
+
 class TargetProgress(BaseModel):
     name: str
     state: WarpBenchmarkState
@@ -335,7 +340,14 @@ class BenchmarkMgr:
             self._results[uuid] = res
 
     async def _load_configs(self) -> None:
-        pass
+        entries = cast(
+            Dict[str, BenchConfig],
+            await self._db.entries(
+                ns=self.NS_CONFIG_BY_UUID, model=BenchConfig
+            ),
+        )
+        for uuid, cfg in entries.items():
+            await self._add_config(UUID(uuid), cfg)
 
     async def _tick(self) -> None:
         self._is_running = True
@@ -419,9 +431,12 @@ class BenchmarkMgr:
         async with self._configs_lock:
             self._configs[uuid] = cfg
 
-    async def config_list(self) -> List[BenchConfig]:
+    async def config_list(self) -> List[BenchConfigDesc]:
+        lst: List[BenchConfigDesc] = []
         async with self._configs_lock:
-            return list(self._configs.values())
+            for uuid, cfg in self._configs.items():
+                lst.append(BenchConfigDesc(uuid=uuid, config=cfg))
+        return lst
 
     async def config_get(
         self, *, name: Optional[str] = None, uuid: Optional[UUID] = None

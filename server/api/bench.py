@@ -5,7 +5,7 @@
 # the Free Software Foundation, either version 3 of the License, or (at
 # your option) any later version.
 from datetime import datetime as dt
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from fastapi import Request, Depends
@@ -17,6 +17,7 @@ from libstuff.bench.runner import (
 )
 from controllers.bench.mgr import (
     BenchConfig,
+    BenchConfigDesc,
     BenchResult,
     BenchRunDesc,
     BenchTarget,
@@ -42,6 +43,16 @@ class BenchStatusReply(BaseModel):
     running: bool
     busy: bool
     current: Optional[BenchRunDesc]
+
+
+class BenchGetConfigReply(BaseModel):
+    date: dt = dt.now()
+    entries: List[BenchConfigDesc]
+
+
+class BenchPostConfigReply(BaseModel):
+    date: dt = dt.now()
+    uuid: UUID
 
 
 @router.post("/run", response_model=BenchStartReply)
@@ -87,3 +98,21 @@ async def get_status(
         busy=mgr.is_busy(),
         current=await mgr.current(),
     )
+
+
+@router.get("/config", response_model=BenchGetConfigReply)
+async def get_config(
+    request: Request, mgr: BenchmarkMgr = Depends(bench_mgr)
+) -> BenchGetConfigReply:
+    return BenchGetConfigReply(entries=await mgr.config_list())
+
+
+@router.post("/config", response_model=BenchPostConfigReply)
+async def post_config(
+    request: Request,
+    config: BenchConfig,
+    mgr: BenchmarkMgr = Depends(bench_mgr),
+) -> BenchPostConfigReply:
+
+    uuid: UUID = await mgr.config_create(config)
+    return BenchPostConfigReply(uuid=uuid)
