@@ -22,6 +22,7 @@ import {
   Subscription,
   take,
 } from "rxjs";
+import { refreshRotateAnimation } from "~/app/shared/animations";
 import {
   S3TestsAPIService,
   S3TestsResultsAPIResult,
@@ -44,15 +45,7 @@ type S3TestsResultsTableEntry = {
   selector: "s3gw-s3tests-results",
   templateUrl: "./s3tests-results.component.html",
   styleUrls: ["./s3tests-results.component.scss"],
-  animations: [
-    trigger("refreshRotate", [
-      transition("void => *", style({ transform: "rotate(0)" })),
-      transition("* => *", [
-        style({ transform: "rotate(0)" }),
-        animate("1500ms ease-out", style({ transform: "rotate(360deg)" })),
-      ]),
-    ]),
-  ],
+  animations: [refreshRotateAnimation],
 })
 export class S3TestsResultsComponent implements OnInit, OnDestroy {
   public firstResultsLoadComplete: boolean = false;

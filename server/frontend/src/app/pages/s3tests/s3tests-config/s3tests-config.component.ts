@@ -45,6 +45,7 @@ import {
   S3TestsConfigEntry,
   S3TestsConfigItem,
 } from "~/app/shared/types/s3tests.type";
+import { refreshRotateAnimation } from "~/app/shared/animations";
 
 type S3TestsConfigTableEntry = {
   config: S3TestsConfigEntry;
@@ -57,15 +58,7 @@ type S3TestsConfigTableEntry = {
   selector: "s3gw-s3tests-config",
   templateUrl: "./s3tests-config.component.html",
   styleUrls: ["./s3tests-config.component.scss"],
-  animations: [
-    trigger("refreshRotate", [
-      transition("void => *", style({ transform: "rotate(0)" })),
-      transition("* => *", [
-        style({ transform: "rotate(0)" }),
-        animate("1500ms ease-out", style({ transform: "rotate(360deg)" })),
-      ]),
-    ]),
-  ],
+  animations: [refreshRotateAnimation],
 })
 export class S3TestsConfigComponent implements OnInit, OnDestroy {
   public firstConfigLoadComplete: boolean = false;
