@@ -93,8 +93,8 @@ limitations under the License.
           </div>
           <div class="mb-3">
             <label for="config-contents">Configuration</label>
-            <textarea id="config-contents" class="form-control" rows="10"
-                      formControlName="configContents" [ngClass]="{
+            <textarea id="config-contents" class="form-control font-monospace"
+                      rows="10" formControlName="configContents" [ngClass]="{
                         'is-invalid': configContents.touched && configContents.errors
                       }"></textarea>
             <div class="invalid-feedback"
