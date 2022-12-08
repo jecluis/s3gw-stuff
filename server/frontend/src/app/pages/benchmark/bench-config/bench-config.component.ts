@@ -36,6 +36,8 @@ type TableEntry = {
   name: string;
   uuid: string;
   targets: string[];
+  config: BenchConfig;
+  collapsed: boolean;
 };
 
 @Component({
@@ -112,10 +114,16 @@ export class BenchConfigComponent implements OnInit {
             name: desc.config.name,
             uuid: desc.uuid,
             targets: targets,
+            config: desc.config,
+            collapsed: true,
           });
         });
         this.entries = entries;
       });
+  }
+
+  public toggleEntry(entry: TableEntry): void {
+    entry.collapsed = !entry.collapsed;
   }
 
   public toggleNewConfig(): void {

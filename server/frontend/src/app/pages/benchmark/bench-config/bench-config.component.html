@@ -35,11 +35,19 @@ limitations under the License.
       </thead>
       <tbody>
         <ng-container *ngFor="let entry of entries">
-          <tr>
+          <tr (click)="toggleEntry(entry)">
             <td scope="row">{{entry.name}}</td>
             <td scope="row">{{entry.uuid}}</td>
             <td scope="row">{{entry.targets}}</td>
           </tr>
+          <ng-container *ngIf="!entry.collapsed">
+            <tr>
+              <td colspan="3">
+                <s3gw-bench-config-view [config]="entry.config">
+                </s3gw-bench-config-view>
+              </td>
+            </tr>
+          </ng-container>
         </ng-container>
       </tbody>
     </table>

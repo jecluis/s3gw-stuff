@@ -30,6 +30,7 @@ import { ConfigResultsPlotComponent } from "~/app/pages/s3tests/config-results-p
 import { BenchmarkComponent } from "~/app/pages/benchmark/benchmark.component";
 import { BenchConfigComponent } from "~/app/pages/benchmark/bench-config/bench-config.component";
 import { BenchResultsComponent } from "~/app/pages/benchmark/bench-results/bench-results.component";
+import { BenchConfigViewComponent } from "~/app/pages/benchmark/bench-config-view/bench-config-view.component";
 
 @NgModule({
   declarations: [
@@ -44,6 +45,7 @@ import { BenchResultsComponent } from "~/app/pages/benchmark/bench-results/bench
     BenchmarkComponent,
     BenchConfigComponent,
     BenchResultsComponent,
+    BenchConfigViewComponent,
   ],
   imports: [
     CommonModule,
