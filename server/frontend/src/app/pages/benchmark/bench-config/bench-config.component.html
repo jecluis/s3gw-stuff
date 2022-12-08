@@ -1,0 +1,96 @@
+<!--
+Copyright 2022 SUSE, LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title">
+      <i class="mdi mdi-cog me-1"></i>
+      Configuration
+      <div class="float-end">
+        <span class="me-2 fs-6 text-muted">Last updated on</span>
+        <i [@refreshRotate]="refreshRotateState" class="mdi mdi-refresh"
+           type="button" (click)="refresh()"></i>
+      </div>
+    </h5>
+
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">UUID</th>
+          <th scope="col">Targets</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let entry of entries">
+          <tr>
+            <td scope="row">{{entry.name}}</td>
+            <td scope="row">{{entry.uuid}}</td>
+            <td scope="row">{{entry.targets}}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer">
+    <button type="button" class="btn btn-outline-dark"
+            (click)="toggleNewConfig()" [disabled]="isSubmittingConfig">
+      {{newConfigButtonLabel}}
+    </button>
+    <button type="button" class="btn btn-outline-primary ms-2"
+            (click)="createNewConfig()"
+            [disabled]="newConfigForm.invalid || isSubmittingConfig"
+            *ngIf="!isNewConfigCollapsed">
+      Submit
+    </button>
+    <div class="card mt-2 p-3" [(ngbCollapse)]="isNewConfigCollapsed">
+      <div>
+        <form [formGroup]="newConfigForm" class="form-group">
+          <div class="mb-3">
+            <label for="config-name">Config Name</label>
+            <input id="config-name" type="text" class="form-control"
+                   formControlName="name" [ngClass]="{
+              'is-invalid': configName.touched && configName.errors,
+              'is-valid': configName.touched && !configName.errors
+            }" required>
+            <div class="invalid-feedback"
+                 *ngIf="configName.errors?.['required']">
+              Must specify a configuration name.
+            </div>
+            <div class="invalid-feedback"
+                 *ngIf="configName.errors?.['nameExists']">
+              Configuration name already exists.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="config-contents">Configuration</label>
+            <textarea id="config-contents" class="form-control" rows="10"
+                      formControlName="contents" [ngClass]="{
+              'is-invalid': configContents.touched && configContents.errors
+            }" required></textarea>
+            <div class="invalid-feedback"
+                 *ngIf="configContents.errors?.['required']">
+              Configuration must be provided.
+            </div>
+            <div class="invalid-feedback"
+                 *ngIf="configContents.errors?.['invalidContents']">
+              Invalid YAML configuration.
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

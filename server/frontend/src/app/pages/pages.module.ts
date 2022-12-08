@@ -26,7 +26,10 @@ import { S3TestsResultsErrorViewComponent } from "~/app/pages/s3tests/s3tests-re
 import { AppRoutingModule } from "../app-routing.module";
 import { ContainersComponent } from "~/app/pages/containers/containers.component";
 import { SharedModule } from "~/app/shared/shared.module";
-import { ConfigResultsPlotComponent } from './s3tests/config-results-plot/config-results-plot.component';
+import { ConfigResultsPlotComponent } from "~/app/pages/s3tests/config-results-plot/config-results-plot.component";
+import { BenchmarkComponent } from "~/app/pages/benchmark/benchmark.component";
+import { BenchConfigComponent } from "~/app/pages/benchmark/bench-config/bench-config.component";
+import { BenchResultsComponent } from "~/app/pages/benchmark/bench-results/bench-results.component";
 
 @NgModule({
   declarations: [
@@ -38,6 +41,9 @@ import { ConfigResultsPlotComponent } from './s3tests/config-results-plot/config
     S3TestsResultsErrorViewComponent,
     ContainersComponent,
     ConfigResultsPlotComponent,
+    BenchmarkComponent,
+    BenchConfigComponent,
+    BenchResultsComponent,
   ],
   imports: [
     CommonModule,
@@ -47,6 +53,6 @@ import { ConfigResultsPlotComponent } from './s3tests/config-results-plot/config
     ReactiveFormsModule,
     SharedModule,
   ],
-  exports: [S3testsComponent],
+  exports: [],
 })
 export class PagesModule {}
