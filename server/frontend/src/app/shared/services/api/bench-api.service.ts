@@ -36,7 +36,7 @@ export type BenchConfig = {
   targets: { [id: string]: BenchConfigTarget };
 };
 
-export type BenchConfigDesc = {
+export type BenchConfigEntry = {
   uuid: string;
   config: BenchConfig;
 };
@@ -82,7 +82,7 @@ export type BenchResultMap = { [id: string]: BenchResult };
 
 type BenchGetConfigAPIResult = {
   date: string;
-  entries: BenchConfigDesc[];
+  entries: BenchConfigEntry[];
 };
 
 type BenchGetResultsAPIResult = {
@@ -101,7 +101,7 @@ type BenchPostConfigAPIResult = {
 export class BenchAPIService {
   public constructor(private svc: ServerAPIService) {}
 
-  public getConfig(): Observable<BenchConfigDesc[]> {
+  public getConfig(): Observable<BenchConfigEntry[]> {
     return this.svc.get<BenchGetConfigAPIResult>("/bench/config").pipe(
       catchError((err) => {
         console.error("error obtaining bench configs.");

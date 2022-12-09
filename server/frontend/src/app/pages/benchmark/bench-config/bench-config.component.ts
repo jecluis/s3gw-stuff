@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Component, OnInit } from "@angular/core";
+import { Component, OnDestroy, OnInit } from "@angular/core";
 import {
   AbstractControl,
   FormControl,
@@ -22,15 +22,16 @@ import {
   Validators,
 } from "@angular/forms";
 import { dump, JSON_SCHEMA, load } from "js-yaml";
-import { catchError, EMPTY, finalize, take } from "rxjs";
+import { catchError, EMPTY, finalize, Subscription, take } from "rxjs";
 import { refreshRotateAnimation } from "~/app/shared/animations";
 import {
   BenchAPIService,
   BenchConfig,
-  BenchConfigDesc,
+  BenchConfigEntry,
   BenchConfigParams,
   BenchConfigTarget,
 } from "~/app/shared/services/api/bench-api.service";
+import { ConfigsService } from "~/app/shared/services/configs.service";
 
 type TableEntry = {
   name: string;
@@ -46,9 +47,11 @@ type TableEntry = {
   styleUrls: ["./bench-config.component.scss"],
   animations: [refreshRotateAnimation],
 })
-export class BenchConfigComponent implements OnInit {
+export class BenchConfigComponent implements OnInit, OnDestroy {
   public refreshRotateState: number = 0;
   public entries: TableEntry[] = [];
+
+  private configSubscription?: Subscription;
 
   public newConfigButtonLabel: string = "New";
   public isNewConfigCollapsed: boolean = true;
@@ -88,38 +91,30 @@ export class BenchConfigComponent implements OnInit {
     },
   };
 
-  public constructor(private svc: BenchAPIService) {}
+  public constructor(
+    private svc: BenchAPIService,
+    private configSvc: ConfigsService,
+  ) {}
 
   public ngOnInit(): void {
-    this.reload();
-  }
-
-  public refresh(): void {
-    this.refreshRotateState++;
-    this.reload();
-  }
-
-  private reload(): void {
-    const sub = this.svc
-      .getConfig()
-      .pipe(
-        take(1),
-        finalize(() => {}),
-      )
-      .subscribe((res: BenchConfigDesc[]) => {
-        const entries: TableEntry[] = [];
-        res.forEach((desc: BenchConfigDesc) => {
-          const targets = Object.keys(desc.config.targets);
-          entries.push({
-            name: desc.config.name,
-            uuid: desc.uuid,
-            targets: targets,
-            config: desc.config,
+    this.configSubscription = this.configSvc.bench.subscribe({
+      next: (entries: BenchConfigEntry[]) => {
+        console.debug("got new bench config entries: ", entries);
+        this.entries = entries.map((entry: BenchConfigEntry) => {
+          return {
+            name: entry.config.name,
+            uuid: entry.uuid,
+            targets: Object.keys(entry.config.targets),
+            config: entry.config,
             collapsed: true,
-          });
+          };
         });
-        this.entries = entries;
-      });
+      },
+    });
+  }
+
+  public ngOnDestroy(): void {
+    this.configSubscription?.unsubscribe();
   }
 
   public toggleEntry(entry: TableEntry): void {
@@ -190,7 +185,6 @@ export class BenchConfigComponent implements OnInit {
       )
       .subscribe((uuid: string) => {
         this.toggleNewConfig();
-        this.reload();
       });
   }
 

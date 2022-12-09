@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { animate, style, transition, trigger } from "@angular/animations";
 import { Component, OnDestroy, OnInit } from "@angular/core";
 import {
   AbstractControl,
@@ -34,7 +33,6 @@ import {
 import {
   S3TestsAPIService,
   S3TestsConfigAPIPostResult,
-  S3TestsConfigAPIResult,
 } from "~/app/shared/services/api/s3tests-api.service";
 import {
   S3TestsStatus,
@@ -46,6 +44,7 @@ import {
   S3TestsConfigItem,
 } from "~/app/shared/types/s3tests.type";
 import { refreshRotateAnimation } from "~/app/shared/animations";
+import { ConfigsService } from "~/app/shared/services/configs.service";
 
 type S3TestsConfigTableEntry = {
   config: S3TestsConfigEntry;
@@ -61,9 +60,6 @@ type S3TestsConfigTableEntry = {
   animations: [refreshRotateAnimation],
 })
 export class S3TestsConfigComponent implements OnInit, OnDestroy {
-  public firstConfigLoadComplete: boolean = false;
-  public loadingConfig: boolean = false;
-  public errorOnLoadingConfig: boolean = false;
   public configList: S3TestsConfigTableEntry[] = [];
   public configListLastUpdated?: Date;
   public refreshRotateState: number = 0;
@@ -102,10 +98,22 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   public constructor(
     private svc: S3TestsAPIService,
     private statusSvc: S3TestsStatusService,
+    private configsSvc: ConfigsService,
   ) {}
 
   public ngOnInit(): void {
-    this.reloadConfig();
+    this.configSubscription = this.configsSvc.s3tests.subscribe({
+      next: (items: S3TestsConfigItem[]) => {
+        this.configList = items.map((item: S3TestsConfigItem) => {
+          return {
+            config: item.config,
+            totalUnits: item.tests.all.length,
+            runnableUnits: item.tests.filtered.length,
+            collapsed: true,
+          };
+        });
+      },
+    });
     this.statusSubscription = this.statusSvc.status.subscribe({
       next: (s: S3TestsStatus) => {
         this.isRunning = !!s ? s.busy : false;
@@ -116,50 +124,6 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   public ngOnDestroy(): void {
     this.configSubscription?.unsubscribe();
     this.statusSubscription?.unsubscribe();
-  }
-
-  private reloadConfig() {
-    this.loadingConfig = true;
-    this.configSubscription = this.loadConfig()
-      .pipe(
-        catchError((err) => {
-          this.errorOnLoadingConfig = true;
-          return EMPTY;
-        }),
-        finalize(() => {
-          this.loadingConfig = false;
-          this.firstConfigLoadComplete = true;
-        }),
-        take(1),
-      )
-      .subscribe((cfg: S3TestsConfigAPIResult) => {
-        this.errorOnLoadingConfig = false;
-        let lst: S3TestsConfigTableEntry[] = [];
-        cfg.entries.forEach((e: S3TestsConfigItem) => {
-          lst.push({
-            config: e.config,
-            totalUnits: e.tests.all.length,
-            runnableUnits: e.tests.filtered.length,
-            collapsed: true,
-          });
-        });
-        this.configList = lst;
-        this.configListLastUpdated = cfg.date;
-        console.log("reload @ ", cfg.date);
-      });
-  }
-
-  private loadConfig(): Observable<S3TestsConfigAPIResult> {
-    return this.svc.getConfig();
-  }
-
-  public refreshConfig(): void {
-    console.log("refresh");
-    this.refreshRotateState += 1;
-    if (!this.loadingConfig) {
-      console.log("reloading...");
-      this.reloadConfig();
-    }
   }
 
   public toggleNewConfig(): void {
@@ -221,7 +185,6 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
       )
       .subscribe((res: S3TestsConfigAPIPostResult) => {
         this.toggleNewConfig();
-        this.refreshConfig();
       });
   }
 
