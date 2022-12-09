@@ -8,19 +8,16 @@ from datetime import datetime as dt
 from typing import Dict, List, Optional
 from uuid import UUID
 
-from fastapi import Request, Depends
+from fastapi import Request, Depends, HTTPException, status
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
 
-from libstuff.bench.runner import (
-    BenchmarkParams,
-)
+from common.error import NoSuchConfigError
 from controllers.bench.mgr import (
     BenchConfig,
     BenchConfigDesc,
     BenchResult,
     BenchRunDesc,
-    BenchTarget,
     BenchmarkMgr,
 )
 from api import bench_mgr
@@ -57,27 +54,16 @@ class BenchPostConfigReply(BaseModel):
 
 @router.post("/run", response_model=BenchStartReply)
 async def run_bench(
-    request: Request, mgr: BenchmarkMgr = Depends(bench_mgr)
+    request: Request, uuid: UUID, mgr: BenchmarkMgr = Depends(bench_mgr)
 ) -> BenchStartReply:
 
-    params = BenchmarkParams(
-        num_objects=100, object_size="100KB", duration="1m"
-    )
-    target = BenchTarget(
-        image="ghcr.io/aquarist-labs/s3gw:latest",
-        access_key="test",
-        secret_key="test",
-        port=7480,
-        args=None,
-    )
-    config = BenchConfig(
-        name="test config",
-        params=params,
-        targets={"s3gw": target},
-    )
+    try:
+        config: BenchConfig = await mgr.config_get(uuid=uuid)
+    except NoSuchConfigError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
-    uuid = await mgr.run(config)
-    return BenchStartReply(uuid=uuid)
+    run_uuid = await mgr.run(config)
+    return BenchStartReply(uuid=run_uuid)
 
 
 @router.get("/results", response_model=BenchGetResultsReply)
