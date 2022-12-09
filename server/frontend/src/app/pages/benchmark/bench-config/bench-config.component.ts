@@ -37,7 +37,7 @@ type TableEntry = {
   name: string;
   uuid: string;
   targets: string[];
-  config: BenchConfig;
+  config: BenchConfigEntry;
   collapsed: boolean;
 };
 
@@ -105,7 +105,7 @@ export class BenchConfigComponent implements OnInit, OnDestroy {
             name: entry.config.name,
             uuid: entry.uuid,
             targets: Object.keys(entry.config.targets),
-            config: entry.config,
+            config: entry,
             collapsed: true,
           };
         });

@@ -100,6 +100,11 @@ type BenchPostConfigAPIResult = {
   uuid: string;
 };
 
+type BenchPostRunAPIResult = {
+  date: string;
+  uuid: string;
+};
+
 export type BenchGetStatusAPIResult = {
   date: string;
   running: boolean;
@@ -144,5 +149,16 @@ export class BenchAPIService {
 
   public getStatus(): Observable<BenchGetStatusAPIResult> {
     return this.svc.get<BenchGetStatusAPIResult>("/bench/status").pipe(take(1));
+  }
+
+  public runConfig(uuid: string): Observable<string> {
+    return this.svc
+      .post<BenchPostRunAPIResult>("/bench/run", {
+        params: { uuid: uuid },
+      })
+      .pipe(
+        take(1),
+        map((res: BenchPostConfigAPIResult) => res.uuid),
+      );
   }
 }
