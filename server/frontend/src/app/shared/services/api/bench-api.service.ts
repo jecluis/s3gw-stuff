@@ -80,6 +80,11 @@ export type BenchResult = {
 
 export type BenchResultMap = { [id: string]: BenchResult };
 
+export type BenchRunDesc = {
+  config: BenchConfig;
+  progress: BenchProgress;
+};
+
 type BenchGetConfigAPIResult = {
   date: string;
   entries: BenchConfigEntry[];
@@ -93,6 +98,13 @@ type BenchGetResultsAPIResult = {
 type BenchPostConfigAPIResult = {
   date: string;
   uuid: string;
+};
+
+export type BenchGetStatusAPIResult = {
+  date: string;
+  running: boolean;
+  busy: boolean;
+  current?: BenchRunDesc;
 };
 
 @Injectable({
@@ -128,5 +140,9 @@ export class BenchAPIService {
         take(1),
         map((res: BenchPostConfigAPIResult) => res.uuid),
       );
+  }
+
+  public getStatus(): Observable<BenchGetStatusAPIResult> {
+    return this.svc.get<BenchGetStatusAPIResult>("/bench/status").pipe(take(1));
   }
 }

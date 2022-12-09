@@ -1,13 +1,13 @@
 import { TestBed } from "@angular/core/testing";
 
-import { S3TestsStatusService } from "./s3tests-status.service";
+import { StatusService } from "./status.service";
 
-describe("S3TestsStatusService", () => {
-  let service: S3TestsStatusService;
+describe("StatusService", () => {
+  let service: StatusService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(S3TestsStatusService);
+    service = TestBed.inject(StatusService);
   });
 
   it("should be created", () => {

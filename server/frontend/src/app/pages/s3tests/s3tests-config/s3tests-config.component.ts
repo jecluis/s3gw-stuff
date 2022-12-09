@@ -22,22 +22,11 @@ import {
   Validators,
 } from "@angular/forms";
 import { dump, JSON_SCHEMA, load } from "js-yaml";
-import {
-  catchError,
-  EMPTY,
-  finalize,
-  Observable,
-  Subscription,
-  take,
-} from "rxjs";
+import { catchError, EMPTY, finalize, Subscription, take } from "rxjs";
 import {
   S3TestsAPIService,
   S3TestsConfigAPIPostResult,
 } from "~/app/shared/services/api/s3tests-api.service";
-import {
-  S3TestsStatus,
-  S3TestsStatusService,
-} from "~/app/shared/services/s3tests-status.service";
 import {
   S3TestsConfigDesc,
   S3TestsConfigEntry,
@@ -45,6 +34,7 @@ import {
 } from "~/app/shared/types/s3tests.type";
 import { refreshRotateAnimation } from "~/app/shared/animations";
 import { ConfigsService } from "~/app/shared/services/configs.service";
+import { StatusService } from "~/app/shared/services/status.service";
 
 type S3TestsConfigTableEntry = {
   config: S3TestsConfigEntry;
@@ -93,11 +83,11 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   };
 
   private configSubscription?: Subscription;
-  private statusSubscription?: Subscription;
+  private busySubscription?: Subscription;
 
   public constructor(
     private svc: S3TestsAPIService,
-    private statusSvc: S3TestsStatusService,
+    private statusSvc: StatusService,
     private configsSvc: ConfigsService,
   ) {}
 
@@ -114,16 +104,16 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
         });
       },
     });
-    this.statusSubscription = this.statusSvc.status.subscribe({
-      next: (s: S3TestsStatus) => {
-        this.isRunning = !!s ? s.busy : false;
+    this.busySubscription = this.statusSvc.busy.subscribe({
+      next: (s: boolean) => {
+        this.isRunning = s;
       },
     });
   }
 
   public ngOnDestroy(): void {
     this.configSubscription?.unsubscribe();
-    this.statusSubscription?.unsubscribe();
+    this.busySubscription?.unsubscribe();
   }
 
   public toggleNewConfig(): void {

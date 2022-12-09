@@ -17,8 +17,8 @@ import { Subscription } from "rxjs";
 import {
   S3TestsProgress,
   S3TestsStatus,
-  S3TestsStatusService,
-} from "~/app/shared/services/s3tests-status.service";
+  StatusService,
+} from "~/app/shared/services/status.service";
 import { S3TestsConfigEntry } from "~/app/shared/types/s3tests.type";
 
 @Component({
@@ -28,34 +28,36 @@ import { S3TestsConfigEntry } from "~/app/shared/types/s3tests.type";
 })
 export class S3testsComponent implements OnInit, OnDestroy {
   public isBusy: boolean = false;
+  public isS3TestsBusy: boolean = false;
   public currentConfig?: S3TestsConfigEntry;
   public currentProgress?: S3TestsProgress;
   public currentDuration?: number;
 
+  private busySubscription?: Subscription;
   private statusSubscription?: Subscription;
 
-  public constructor(private svc: S3TestsStatusService) {}
+  public constructor(private status: StatusService) {}
 
   public ngOnInit(): void {
-    this.refreshStatus();
-  }
-
-  public ngOnDestroy(): void {
-    this.statusSubscription?.unsubscribe();
-  }
-
-  private refreshStatus(): void {
-    this.statusSubscription = this.svc.status.subscribe({
+    this.statusSubscription = this.status.s3tests.subscribe({
       next: (status: S3TestsStatus) => {
         if (!status) {
           return;
         }
-        this.isBusy = status.busy;
+        this.isS3TestsBusy = status.busy;
         this.currentConfig = status.item?.config;
         this.currentProgress = status.progress;
       },
     });
+    this.busySubscription = this.status.busy.subscribe({
+      next: (busy: boolean) => {
+        this.isBusy = busy;
+      },
+    });
+  }
 
-    return;
+  public ngOnDestroy(): void {
+    this.statusSubscription?.unsubscribe();
+    this.busySubscription?.unsubscribe();
   }
 }
