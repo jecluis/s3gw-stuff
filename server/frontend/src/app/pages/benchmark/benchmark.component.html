@@ -19,9 +19,44 @@ limitations under the License.
     <div class="col-12">
       <div class="d-flex flex-row align-items-center h-100 px-2">
         <h5 class="fw-bold text-uppercase">benchmark</h5>
-        <div class="ps-3">
 
+        <div class="ps-3">
+          <h5 class="text-success" *ngIf="!isBusy">
+            <i class="mdi mdi-server me-1"></i>
+            AVAILABLE
+          </h5>
+          <h5 class="text-info" *ngIf="isBusy">
+            <i class="mdi mdi-run-fast me-1"></i>
+            <span>RUNNING</span>
+          </h5>
         </div>
+
+        <div class="ps-3 d-flex flex-row align-items-center h-100"
+             *ngIf="isBenchBusy">
+          <div class="ps-3" style="margin-bottom: 0.5rem">
+            <span class="fw-bold">CONFIG</span>
+            <span class="ps-1 fst-italic">
+              {{currentRun?.config?.name}}
+            </span>
+          </div>
+          <div class="ps-3" style="margin-bottom: 0.5rem"
+               *ngIf="!!currentProgress">
+            <span>
+              {{currentProgress.targetNum}} of
+              {{currentProgress.totalTargets}}
+            </span>
+            <span class="ps-3">
+              {{currentProgress.target}}
+            </span>
+            <span class="ps-3">
+              {{currentProgress.state}}: {{currentProgress.progress}}%
+            </span>
+            <span class="ps-3 fst-italic">
+              ({{currentProgress.duration}} s)
+            </span>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

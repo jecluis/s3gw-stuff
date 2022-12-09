@@ -191,14 +191,6 @@ export class StatusService implements OnDestroy {
       busy: res.busy,
       item: res.current,
     };
-    const lastStatus: BenchStatus = this.lastStatus.bench;
-    if (
-      !!lastStatus &&
-      lastStatus.running === status.running &&
-      lastStatus.busy == status.busy
-    ) {
-      return;
-    }
     this.lastStatus.bench = status;
     this.benchSubject.next(status);
   }
