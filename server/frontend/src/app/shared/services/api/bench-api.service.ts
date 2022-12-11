@@ -69,13 +69,18 @@ export type BenchProgress = {
   targets: BenchTargetProgress[];
 };
 
+export type BenchResultTargetItem = {
+  name: string;
+  ops: string[];
+};
+
 export type BenchResult = {
   uuid: string;
   progress: BenchProgress;
   is_error: boolean;
   errors: BenchTargetError[];
   config: BenchConfig;
-  results: { [id: string]: string };
+  ops: BenchResultTargetItem[];
 };
 
 export type BenchResultMap = { [id: string]: BenchResult };
@@ -85,6 +90,14 @@ export type BenchRunDesc = {
   progress: BenchProgress;
 };
 
+export type Histogram = {
+  op: string;
+  data: number[];
+};
+
+export type ResultHistogramMap = { [id: string]: Histogram };
+export type ResultHistograms = { [id: string]: ResultHistogramMap };
+
 type BenchGetConfigAPIResult = {
   date: string;
   entries: BenchConfigEntry[];
@@ -93,6 +106,11 @@ type BenchGetConfigAPIResult = {
 type BenchGetResultsAPIResult = {
   date: string;
   results: BenchResultMap;
+};
+
+type BenchGetResultsHistogramsAPIResult = {
+  date: string;
+  results: ResultHistograms;
 };
 
 type BenchPostConfigAPIResult = {
@@ -134,6 +152,21 @@ export class BenchAPIService {
       take(1),
       map((res: BenchGetResultsAPIResult) => res.results),
     );
+  }
+
+  public getResultsHistograms(uuid: string): Observable<ResultHistograms> {
+    return this.svc
+      .get<BenchGetResultsHistogramsAPIResult>("/bench/results/histograms", {
+        params: { uuid: uuid },
+      })
+      .pipe(
+        take(1),
+        catchError((err) => {
+          console.error("error obtaining result histograms for ", uuid);
+          return EMPTY;
+        }),
+        map((res: BenchGetResultsHistogramsAPIResult) => res.results),
+      );
   }
 
   public postConfig(config: BenchConfig): Observable<string> {

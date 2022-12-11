@@ -37,13 +37,27 @@ limitations under the License.
       </thead>
       <tbody class="table-group-divider">
         <ng-container *ngFor="let entry of entries">
-          <tr>
+          <tr (click)="toggleEntry(entry)">
             <td scope="row">{{entry.date|date:"MMM d y, HH:mm:ss"}}</td>
             <td scope="row">{{entry.config}}</td>
             <td scope="row">{{entry.uuid}}</td>
             <td scope="row">{{entry.targets}}</td>
             <td scope="row">{{entry.duration}}</td>
           </tr>
+          <ng-container *ngIf="!entry.collapsed">
+            <tr>
+              <td colspan="5">
+                <div class="alert alert-info" *ngIf="entry.results.fetching">
+                  Fetching results...
+                </div>
+                <div class="card" *ngIf="entry.results.hasResults">
+                  <s3gw-plotly [data]="entry.histograms['s3gw']['STAT'].data"
+                               [layout]="entry.histograms['s3gw']['STAT'].layout">
+                  </s3gw-plotly>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
         </ng-container>
       </tbody>
     </table>

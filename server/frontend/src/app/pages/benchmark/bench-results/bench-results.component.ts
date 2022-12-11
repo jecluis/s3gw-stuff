@@ -20,7 +20,20 @@ import {
   BenchResult,
   BenchResultMap,
   BenchTargetProgress,
+  Histogram,
+  ResultHistograms,
 } from "~/app/shared/services/api/bench-api.service";
+
+type HistogramEntry = {
+  data: Plotly.Data[];
+  layout: Partial<Plotly.Layout>;
+};
+
+type ResultsEntry = {
+  hasResults: boolean;
+  fetching: boolean;
+  results: ResultHistograms;
+};
 
 type TableEntry = {
   date: Date;
@@ -28,6 +41,9 @@ type TableEntry = {
   uuid: string;
   targets: string[];
   duration: number;
+  collapsed: boolean;
+  results: ResultsEntry;
+  histograms: { [id: string]: { [id: string]: HistogramEntry } };
 };
 
 @Component({
@@ -82,9 +98,78 @@ export class BenchResultsComponent implements OnInit {
             uuid: value.uuid,
             targets: targets,
             duration: value.progress.duration,
+            collapsed: true,
+            results: { hasResults: false, fetching: false, results: {} },
+            histograms: {},
           });
         });
         this.entries = lst.sort((a, b) => b.date.getTime() - a.date.getTime());
+      });
+  }
+
+  public toggleEntry(entry: TableEntry): void {
+    entry.collapsed = !entry.collapsed;
+    if (entry.collapsed) {
+      return;
+    }
+    if (!entry.results.hasResults) {
+      this.fetchResults(entry);
+    }
+  }
+
+  private getData(
+    results: ResultHistograms,
+    target: string,
+    op: string,
+  ): Plotly.Data[] {
+    const hist: Histogram = results[target][op];
+    const trace: Plotly.Data = {
+      type: "histogram",
+      x: hist.data,
+      title: { text: `Latency distribution for ${target}'s ${op}` },
+      name: op,
+      xaxis: "milliseconds",
+      yaxis: "count",
+      showlegend: true,
+    };
+    return [trace];
+  }
+
+  private getLayout(target: string, op: string): Partial<Plotly.Layout> {
+    return {
+      title: `Latency distribution for ${target}'s ${op}`,
+      xaxis: { title: "milliseconds" },
+      yaxis: { title: "count" },
+    };
+  }
+
+  private fetchResults(entry: TableEntry): void {
+    if (entry.results.fetching) {
+      return;
+    }
+    entry.results.fetching = true;
+    const sub = this.svc
+      .getResultsHistograms(entry.uuid)
+      .pipe(
+        finalize(() => {
+          entry.results.fetching = false;
+        }),
+      )
+      .subscribe((res: ResultHistograms) => {
+        console.log(`histograms for ${entry.uuid}:`, res);
+        entry.results.hasResults = true;
+        entry.results.results = res;
+        Object.keys(res).forEach((target: string) => {
+          Object.keys(res[target]).forEach((opname: string) => {
+            if (!(target in entry.histograms)) {
+              entry.histograms[target] = {};
+            }
+            entry.histograms[target][opname] = {
+              data: this.getData(res, target, opname),
+              layout: this.getLayout(target, opname),
+            };
+          });
+        });
       });
   }
 }
