@@ -14,9 +14,9 @@ from typing import Dict, List, Optional, cast
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
+from libstuff.bench.plots import Histogram
 
 from libstuff.bench.runner import (
-    BenchmarkParams,
     BenchmarkPorts,
     BenchmarkRunner,
     BenchmarkTarget,
@@ -24,73 +24,23 @@ from libstuff.bench.runner import (
 from libstuff.bench.warp import WarpBenchmarkState
 from libstuff.dbm import DBM
 from common.error import NoSuchConfigError
+from controllers.bench.types import (
+    BenchConfig,
+    BenchConfigDesc,
+    BenchDBNS,
+    BenchProgress,
+    BenchResult,
+    BenchTarget,
+    BenchTargetError,
+    TargetProgress,
+)
+from controllers.bench.results import ResultItem, Results
 
 
 def _gen_random_host_port() -> int:
     FIRST_PORT = 54780
     LAST_PORT = 54880
     return random.choice(list(range(FIRST_PORT, LAST_PORT)))
-
-
-class BenchTarget(BaseModel):
-    image: str
-    args: Optional[str]
-    port: int
-    access_key: str
-    secret_key: str
-
-
-class BenchConfig(BaseModel):
-    name: str
-    params: BenchmarkParams
-    targets: Dict[str, BenchTarget]
-
-
-class BenchConfigDesc(BaseModel):
-    uuid: UUID
-    config: BenchConfig
-
-
-class TargetProgress(BaseModel):
-    name: str
-    state: WarpBenchmarkState
-    value: float
-    has_progress: bool
-    is_running: bool
-    is_done: bool
-    is_error: bool
-    error_str: Optional[str]
-    time_start: Optional[dt]
-    time_end: Optional[dt]
-    duration: int
-
-    def progress_cb(self, state: WarpBenchmarkState, value: float) -> None:
-        self.has_progress = True
-        self.state = state
-        self.value = value
-
-
-class BenchProgress(BaseModel):
-    is_running: bool
-    is_done: bool
-    time_start: Optional[dt]
-    time_end: Optional[dt]
-    duration: int
-    targets: List[TargetProgress]
-
-
-class BenchTargetError(BaseModel):
-    target: str
-    error_str: str
-
-
-class BenchResult(BaseModel):
-    uuid: UUID
-    progress: BenchProgress
-    is_error: bool
-    errors: List[BenchTargetError]
-    config: BenchConfig
-    results: Dict[str, str]
 
 
 class BenchRunDesc(BaseModel):
@@ -282,15 +232,15 @@ class BenchmarkMgr:
     _db: DBM
 
     _work_item: Optional[WorkItem]
-    _results: Dict[UUID, BenchResult]
+    _results: Results
     _configs: Dict[UUID, BenchConfig]
 
     logger: logging.Logger
 
-    NS_CONFIG_BY_UUID = "bench-config"
-    NS_CONFIG_BY_NAME = "bench-config-by-name"
-    NS_RESULTS = "bench-results"
-    NS_CONFIG_RESULTS = "bench-config-results"
+    NS_CONFIG_BY_UUID = BenchDBNS.NS_CONFIG_BY_UUID
+    NS_CONFIG_BY_NAME = BenchDBNS.NS_CONFIG_BY_NAME
+    NS_RESULTS = BenchDBNS.NS_RESULTS
+    NS_CONFIG_RESULTS = BenchDBNS.NS_CONFIG_RESULTS
 
     def __init__(self, db: DBM, logger: logging.Logger) -> None:
         self._lock = asyncio.Lock()
@@ -302,7 +252,7 @@ class BenchmarkMgr:
         self._error_str = None
         self._db = db
         self._work_item = None
-        self._results = {}
+        self._results = Results(db, logger)
         self._configs = {}
         self.logger = logger
 
@@ -318,10 +268,15 @@ class BenchmarkMgr:
 
         await self._load_results()
         await self._load_configs()
+        await self._results.start()
         self._task = asyncio.create_task(self._tick())
 
     async def stop(self) -> None:
-        pass
+        if self._task is None:
+            return
+        self._is_shutting_down = True
+        await self._results.stop()
+        await self._task
 
     def _can_run(self) -> bool:
         if shutil.which("warp") is None:
@@ -335,9 +290,8 @@ class BenchmarkMgr:
             Dict[str, BenchResult],
             await self._db.entries(ns=self.NS_RESULTS, model=BenchResult),
         )
-        for raw_uuid, res in entries.items():
-            uuid = UUID(raw_uuid)
-            self._results[uuid] = res
+        for res in entries.values():
+            await self._results.add(res)
 
     async def _load_configs(self) -> None:
         entries = cast(
@@ -378,7 +332,7 @@ class BenchmarkMgr:
         # handle work item results
         res = self._work_item.results
         await self._db.put(ns=self.NS_RESULTS, key=str(uuid), value=res)
-        self._results[uuid] = res
+        await self._results.add(res)
 
         self._work_item = None
 
@@ -459,6 +413,11 @@ class BenchmarkMgr:
                 raise NoSuchConfigError()
             return self._configs[_uuid]
 
+    async def get_histograms(
+        self, uuid: UUID
+    ) -> Dict[str, Dict[str, Histogram]]:
+        return await self._results.get_histograms(uuid)
+
     @property
-    def results(self) -> Dict[UUID, BenchResult]:
-        return self._results
+    def results(self) -> Dict[UUID, ResultItem]:
+        return self._results.results

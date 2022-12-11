@@ -12,15 +12,16 @@ from fastapi import Request, Depends, HTTPException, status
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
 
-from common.error import NoSuchConfigError
+from common.error import NoSuchConfigError, NoSuchRunError
 from controllers.bench.mgr import (
     BenchConfig,
     BenchConfigDesc,
-    BenchResult,
     BenchRunDesc,
     BenchmarkMgr,
 )
 from api import bench_mgr
+from controllers.bench.results import ResultItem
+from libstuff.bench.plots import Histogram
 
 router: APIRouter = APIRouter(prefix="/bench", tags=["benchmarking"])
 
@@ -32,7 +33,12 @@ class BenchStartReply(BaseModel):
 
 class BenchGetResultsReply(BaseModel):
     date: dt = dt.now()
-    results: Dict[UUID, BenchResult]
+    results: Dict[UUID, ResultItem]
+
+
+class BenchGetResultsHistogramsReply(BaseModel):
+    date: dt = dt.now()
+    results: Dict[str, Dict[str, Histogram]]
 
 
 class BenchStatusReply(BaseModel):
@@ -72,6 +78,19 @@ async def get_results(
 ) -> BenchGetResultsReply:
 
     return BenchGetResultsReply(results=mgr.results)
+
+
+@router.get(
+    "/results/histograms", response_model=BenchGetResultsHistogramsReply
+)
+async def get_results_histograms(
+    request: Request, uuid: UUID, mgr: BenchmarkMgr = Depends(bench_mgr)
+) -> BenchGetResultsHistogramsReply:
+    try:
+        res = await mgr.get_histograms(uuid)
+        return BenchGetResultsHistogramsReply(results=res)
+    except NoSuchRunError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
 
 @router.get("/status", response_model=BenchStatusReply)
