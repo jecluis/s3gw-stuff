@@ -12,7 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Component, ElementRef, Input, OnInit, ViewChild } from "@angular/core";
+import {
+  Component,
+  ElementRef,
+  Input,
+  OnChanges,
+  OnInit,
+  SimpleChanges,
+  ViewChild,
+} from "@angular/core";
 import * as Plotly from "plotly.js-dist-min";
 
 @Component({
@@ -20,7 +28,7 @@ import * as Plotly from "plotly.js-dist-min";
   templateUrl: "./plotly.component.html",
   styleUrls: ["./plotly.component.scss"],
 })
-export class PlotlyComponent implements OnInit {
+export class PlotlyComponent implements OnInit, OnChanges {
   @ViewChild("plot", { static: true })
   public plotElement!: ElementRef;
 
@@ -33,6 +41,12 @@ export class PlotlyComponent implements OnInit {
 
   public ngOnInit(): void {
     this.create().then(() => {});
+  }
+
+  public ngOnChanges(changes: SimpleChanges): void {
+    if ("data" in changes || "layout" in changes) {
+      this.create().then(() => {});
+    }
   }
 
   private create(): Promise<Plotly.PlotlyHTMLElement> {
