@@ -61,7 +61,6 @@ export class BenchResultsPlotsComponent implements OnInit {
         }),
       )
       .subscribe((res: ResultHistograms) => {
-        this.targets.push("minio");
         Object.keys(res).forEach((target: string) => {
           this.targets.push(target);
           Object.keys(res[target]).forEach((opname: string) => {
