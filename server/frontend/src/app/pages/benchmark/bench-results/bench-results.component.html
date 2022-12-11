@@ -47,14 +47,8 @@ limitations under the License.
           <ng-container *ngIf="!entry.collapsed">
             <tr>
               <td colspan="5">
-                <div class="alert alert-info" *ngIf="entry.results.fetching">
-                  Fetching results...
-                </div>
-                <div class="card" *ngIf="entry.results.hasResults">
-                  <s3gw-plotly [data]="entry.histograms['s3gw']['STAT'].data"
-                               [layout]="entry.histograms['s3gw']['STAT'].layout">
-                  </s3gw-plotly>
-                </div>
+                <s3gw-bench-results-plots [uuid]="entry.uuid">
+                </s3gw-bench-results-plots>
               </td>
             </tr>
           </ng-container>

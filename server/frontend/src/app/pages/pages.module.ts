@@ -31,6 +31,7 @@ import { BenchmarkComponent } from "~/app/pages/benchmark/benchmark.component";
 import { BenchConfigComponent } from "~/app/pages/benchmark/bench-config/bench-config.component";
 import { BenchResultsComponent } from "~/app/pages/benchmark/bench-results/bench-results.component";
 import { BenchConfigViewComponent } from "~/app/pages/benchmark/bench-config-view/bench-config-view.component";
+import { BenchResultsPlotsComponent } from "~/app/pages/benchmark/bench-results-plots/bench-results-plots.component";
 
 @NgModule({
   declarations: [
@@ -46,6 +47,7 @@ import { BenchConfigViewComponent } from "~/app/pages/benchmark/bench-config-vie
     BenchConfigComponent,
     BenchResultsComponent,
     BenchConfigViewComponent,
+    BenchResultsPlotsComponent,
   ],
   imports: [
     CommonModule,
