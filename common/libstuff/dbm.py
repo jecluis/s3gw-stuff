@@ -157,6 +157,14 @@ class DBM:
         content = self._db[_key].decode("utf-8")
         return content
 
+    async def rm(self, ns: Optional[str], key: str) -> bool:
+        async with self._lock:
+            _key = self._get_key(ns, key)
+            if _key not in self._db:
+                return False
+            del self._db[_key]
+            return True
+
     async def exists(self, *, ns: Optional[str] = None, key: str) -> bool:
         async with self._lock:
             return self._exists(ns, key)
