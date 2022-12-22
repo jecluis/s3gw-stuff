@@ -32,6 +32,8 @@ from libstuff.s3tests.runner import (
 )
 from pydantic import BaseModel
 
+from controllers.wq.wq import WorkQueue
+
 
 class S3TestRunProgress(BaseModel):
     tests_total: int
@@ -229,6 +231,7 @@ class S3TestsMgr:
     _is_shutting_down: bool
 
     _db: DBM
+    _wq: WorkQueue
     _s3tests_path: Path
 
     _work_item: Optional[WorkItem]
@@ -241,12 +244,13 @@ class S3TestsMgr:
     NS_TESTS_ERRORS = "s3tests-results-errors"
     NS_TESTS_CONFIG_RESULTS = "s3tests-config-results"
 
-    def __init__(self, db: DBM) -> None:
+    def __init__(self, db: DBM, wq: WorkQueue) -> None:
         self._lock = asyncio.Lock()
         self._configs_lock = asyncio.Lock()
         self._task = None
         self._is_shutting_down = False
         self._db = db
+        self._wq = wq
         self._s3tests_path = Path("./s3tests.git").resolve()
         self._work_item = None
         self._results = {}

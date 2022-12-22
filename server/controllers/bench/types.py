@@ -5,13 +5,12 @@
 # the Free Software Foundation, either version 3 of the License, or (at
 # your option) any later version.
 
-from datetime import datetime as dt
 from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
 from libstuff.bench.runner import BenchmarkParams
-from libstuff.bench.warp import WarpBenchmarkState
+from controllers.wq.progress import WQItemProgress
 
 
 class BenchTarget(BaseModel):
@@ -33,32 +32,7 @@ class BenchConfigDesc(BaseModel):
     config: BenchConfig
 
 
-class TargetProgress(BaseModel):
-    name: str
-    state: WarpBenchmarkState
-    value: float
-    has_progress: bool
-    is_running: bool
-    is_done: bool
-    is_error: bool
-    error_str: Optional[str]
-    time_start: Optional[dt]
-    time_end: Optional[dt]
-    duration: int
-
-    def progress_cb(self, state: WarpBenchmarkState, value: float) -> None:
-        self.has_progress = True
-        self.state = state
-        self.value = value
-
-
-class BenchProgress(BaseModel):
-    is_running: bool
-    is_done: bool
-    time_start: Optional[dt]
-    time_end: Optional[dt]
-    duration: int
-    targets: List[TargetProgress]
+BenchProgress = WQItemProgress
 
 
 class BenchTargetError(BaseModel):

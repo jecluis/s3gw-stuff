@@ -43,7 +43,7 @@ class BenchGetResultsHistogramsReply(BaseModel):
 
 class BenchStatusReply(BaseModel):
     date: dt = dt.now()
-    running: bool
+    available: bool
     busy: bool
     current: Optional[BenchRunDesc]
 
@@ -99,7 +99,7 @@ async def get_status(
 ) -> BenchStatusReply:
 
     return BenchStatusReply(
-        running=mgr.is_running(),
+        available=mgr.is_available(),
         busy=mgr.is_busy(),
         current=await mgr.current(),
     )
