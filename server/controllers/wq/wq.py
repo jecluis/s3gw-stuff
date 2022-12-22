@@ -98,7 +98,7 @@ class WQItem(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def _progress(self) -> WQItemProgressType:
+    def _progress(self) -> Optional[WQItemProgressType]:
         pass
 
 

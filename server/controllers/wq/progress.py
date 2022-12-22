@@ -20,4 +20,4 @@ class WQItemProgress(BaseModel):
     time_start: Optional[dt]
     time_end: Optional[dt]
     duration: int
-    progress: WQItemProgressType
+    progress: Optional[WQItemProgressType]

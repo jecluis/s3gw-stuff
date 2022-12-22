@@ -8,6 +8,7 @@
 import asyncio
 from datetime import datetime as dt
 from pathlib import Path
+import logging
 import random
 import string
 from typing import Dict, List, Optional, cast
@@ -32,25 +33,19 @@ from libstuff.s3tests.runner import (
 )
 from pydantic import BaseModel
 
-from controllers.wq.wq import WorkQueue
+from controllers.s3tests.progress import S3TestRunProgress
+from controllers.wq.wq import WorkQueue, WQItem, WQItemCB, WQItemKind
+from controllers.wq.progress import WQItemProgressType, WQItemProgress
 
 
-class S3TestRunProgress(BaseModel):
-    tests_total: int
-    tests_run: int
-
-    @property
-    def progress(self) -> float:
-        if self.tests_total == 0:
-            return 100
-        return (self.tests_run * 100) / self.tests_total
+S3TestsProgress = WQItemProgress
 
 
 class S3TestRunDesc(BaseModel):
     uuid: UUID
     time_start: Optional[dt]
     config: S3TestsConfigEntry
-    progress: Optional[S3TestRunProgress]
+    progress: Optional[S3TestsProgress]
 
 
 class S3TestRunResult(S3TestRunDesc):
@@ -88,48 +83,32 @@ def _gen_random_container_port() -> int:
     return random.choice(ports)
 
 
-class WorkItem:
-    _uuid: UUID
+class WorkItem(WQItem):
     _runner: S3TestsRunner
     _config: S3TestsConfigEntry
-    _task: Optional[asyncio.Task[None]]
     _results: TestRunResult
-    _is_running: bool
-    _is_done: bool
     _is_error: bool
     _error_str: Optional[str]
-    _time_start: Optional[dt]
-    _time_end: Optional[dt]
 
     _progress_total: int
     _progress_curr: int
     _has_progress: bool
 
     def __init__(
-        self, runner: S3TestsRunner, config: S3TestsConfigEntry
+        self,
+        runner: S3TestsRunner,
+        config: S3TestsConfigEntry,
+        logger: logging.Logger,
     ) -> None:
-        self._uuid = uuid4()
+        super().__init__(logger)
         self._runner = runner
         self._config = config
-        self._task = None
         self._results = TestRunResult(results=[], errors={})
-        self._is_running = False
-        self._is_done = False
         self._is_error = False
         self._error_str = None
-        self._time_start = None
-        self._time_end = None
         self._progress_total = 0
         self._progress_curr = 0
         self._has_progress = False
-
-    async def run(self) -> UUID:
-        if self._is_running or self._is_done:
-            return self._uuid
-
-        assert not self._task
-        self._task = asyncio.create_task(self._run())
-        return self._uuid
 
     def _progress_cb(self, total: int, progress: int) -> None:
         self._has_progress = True
@@ -156,22 +135,18 @@ class WorkItem:
             self._is_error = True
             self._error_str = str(e)
 
-        self._time_end = dt.now()
-        self._is_done = True
-
-    async def stop(self) -> None:
-        if self._task is not None:
-            logger.debug(f"stopping work item task...")
-            self._task.cancel()
-        self._is_done = True
-        self._is_running = False
+    async def _stop(self) -> None:
+        pass
 
     @property
-    def progress(self) -> Optional[S3TestRunProgress]:
+    def _progress(self) -> Optional[WQItemProgressType]:
         if not self._has_progress:
             return None
-        return S3TestRunProgress(
-            tests_total=self._progress_total, tests_run=self._progress_curr
+        return cast(
+            WQItemProgressType,
+            S3TestRunProgress(
+                tests_total=self._progress_total, tests_run=self._progress_curr
+            ),
         )
 
     @property
@@ -191,10 +166,6 @@ class WorkItem:
     @property
     def errors(self) -> Dict[str, ErrorTestResult]:
         return self._results.errors
-
-    @property
-    def uuid(self) -> UUID:
-        return self._uuid
 
     @property
     def desc(self) -> S3TestRunDesc:
@@ -234,7 +205,7 @@ class S3TestsMgr:
     _wq: WorkQueue
     _s3tests_path: Path
 
-    _work_item: Optional[WorkItem]
+    _current: Optional[WorkItem]
     _results: Dict[UUID, S3TestRunResult]
     _configs: Dict[UUID, S3TestsConfigItem]
 
@@ -252,7 +223,7 @@ class S3TestsMgr:
         self._db = db
         self._wq = wq
         self._s3tests_path = Path("./s3tests.git").resolve()
-        self._work_item = None
+        self._current = None
         self._results = {}
         self._configs = {}
 
@@ -327,26 +298,26 @@ class S3TestsMgr:
         )
         return await runner.collect(cfg)
 
-    async def _handle_work_item_results(self) -> None:
-        assert self._work_item is not None
-        assert self._work_item.is_done()
+    async def _handle_work_item_results(self, item: WorkItem) -> None:
+        assert item is not None
+        assert item.is_done()
 
-        uuid = self._work_item.uuid
+        uuid = item.uuid
 
         # handle work item results
-        res = self._work_item.results
+        res = item.results
         await self._db.put(ns=self.NS_TESTS, key=str(uuid), value=res)
         self._results[uuid] = res
 
         # handle work item errors
         #  stores them at 's3tests-results-errors/uuid/testname'
-        errors = self._work_item.errors
+        errors = item.errors
         for name, entry in errors.items():
             key = str(uuid) + "/" + name
             await self._db.put(ns=self.NS_TESTS_ERRORS, key=key, value=entry)
 
         # store association between config and the results
-        config_uuid = self._work_item.config
+        config_uuid = item.config
         k = f"{config_uuid}/{uuid}"
 
         resdict: Dict[str, int] = {"ok": 0, "error": 0, "fail": 0}
@@ -378,17 +349,17 @@ class S3TestsMgr:
     async def _tick(self) -> None:
         while not self._is_shutting_down:
             logger.debug("tick s3tests runner")
-            if self._work_item is not None:
-                if self._work_item.is_done():
-                    await self._handle_work_item_results()
-                else:
-                    logger.debug(f"work item {self._work_item.uuid} running...")
+            # if self._work_item is not None:
+            #     if self._work_item.is_done():
+            #         await self._handle_work_item_results()
+            #     else:
+            #         logger.debug(f"work item {self._work_item.uuid} running...")
 
             await asyncio.sleep(1.0)
 
-        if self._work_item is not None:
-            logger.debug(f"stopping work item {self._work_item.uuid}...")
-            await self._work_item.stop()
+        # if self._work_item is not None:
+        #     logger.debug(f"stopping work item {self._work_item.uuid}...")
+        #     await self._work_item.stop()
 
         logger.debug("finishing s3tests runner")
         pass
@@ -397,13 +368,28 @@ class S3TestsMgr:
         return not self._is_shutting_down and self._task is not None
 
     def is_busy(self) -> bool:
-        return self.is_running() and self._work_item is not None
+        return self.is_running() and self._current is not None
+
+    async def _handle_started_item(self, item: WQItem) -> None:
+        _item: WorkItem = cast(WorkItem, item)
+        logger.debug(f"starting work item uuid {_item.uuid}")
+        async with self._lock:
+            assert not self.is_busy()
+            assert self._current is None
+            self._current = _item
+
+    async def _handle_finished_item(self, item: WQItem) -> None:
+        _item: WorkItem = cast(WorkItem, item)
+        logger.debug(f"finished work item uuid {_item.uuid}")
+        async with self._lock:
+            assert self.is_busy()
+            assert self._current is not None
+            assert self._current.uuid == item.uuid
+            await self._handle_work_item_results(_item)
+            self._current = None
 
     async def run(self, cfg: S3TestsConfigEntry) -> UUID:
         async with self._lock:
-            if self._work_item is not None:
-                return self._work_item.uuid
-
             isodate = dt.now().isoformat()
             run_name = f"s3tests-{isodate}"
 
@@ -412,8 +398,13 @@ class S3TestsMgr:
                 self._s3tests_path,
                 logger,
             )
-            self._work_item = WorkItem(runner, cfg)
-            return await self._work_item.run()
+            item = WorkItem(runner, cfg, logger)
+            cb: WQItemCB = WQItemCB(
+                start=self._handle_started_item,
+                finish=self._handle_finished_item,
+            )
+            await self._wq.put(item, WQItemKind.S3TESTS, cb)
+            return item.uuid
         pass
 
     async def config_create(self, desc: S3TestsConfigDesc) -> UUID:
@@ -523,5 +514,5 @@ class S3TestsMgr:
     def current_run(self) -> Optional[S3TestRunDesc]:
         if not self.is_busy():
             return None
-        assert self._work_item is not None
-        return self._work_item.desc
+        assert self._current is not None
+        return self._current.desc

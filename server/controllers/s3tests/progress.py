@@ -5,12 +5,15 @@
 # the Free Software Foundation, either version 3 of the License, or (at
 # your option) any later version.
 
-from typing import Union
 from pydantic import BaseModel
 
-from controllers.bench.progress import BenchTargetsProgress
-from controllers.s3tests.progress import S3TestRunProgress
 
+class S3TestRunProgress(BaseModel):
+    tests_total: int
+    tests_run: int
 
-class WQItemProgressType(BaseModel):
-    __root__: Union[BenchTargetsProgress, S3TestRunProgress]
+    @property
+    def progress(self) -> float:
+        if self.tests_total == 0:
+            return 100
+        return (self.tests_run * 100) / self.tests_total
