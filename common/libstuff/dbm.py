@@ -171,7 +171,7 @@ class DBM:
         ns: Optional[str] = None,
         prefix: Optional[str] = None,
         model: Type[BM | str] = str,
-    ) -> Dict[str, Type[BM | str]]:
+    ) -> Dict[str, Type[BM] | str]:
 
         results_model: Dict[str, model] = {}
 
