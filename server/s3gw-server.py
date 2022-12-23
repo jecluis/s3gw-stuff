@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from api import containers, s3tests, bench
+from api import bench, containers, s3tests, wq
 from common.error import ServerError
 from controllers.config import ServerConfig, ServerConfigError
 from controllers.context import ServerContext
@@ -122,6 +122,10 @@ def server_factory(
             "name": "benchmarking",
             "description": "Benchmark s3gw containers",
         },
+        {
+            "name": "workqueue",
+            "description": "Work Queue",
+        },
     ]
 
     server_app = FastAPI(docs_url=None)
@@ -143,6 +147,7 @@ def server_factory(
     server_api.include_router(containers.router)
     server_api.include_router(s3tests.router)
     server_api.include_router(bench.router)
+    server_api.include_router(wq.router)
 
     # bench_api.include_router(whatever.router)
     server_app.mount("/api", server_api, name="api")

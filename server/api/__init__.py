@@ -5,11 +5,11 @@
 # the Free Software Foundation, either version 3 of the License, or (at
 # your option) any later version.
 
+from controllers.bench.mgr import BenchmarkMgr
 from controllers.context import ServerContext
 from controllers.s3tests.mgr import S3TestsMgr
+from controllers.wq.wq import WorkQueue
 from fastapi import Request
-
-from controllers.bench.mgr import BenchmarkMgr
 
 
 class APIServerContext:
@@ -39,6 +39,16 @@ class APIBenchMgr:
         return ctx.bench
 
 
+class APIWorkQueue:
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, request: Request) -> WorkQueue:
+        ctx: ServerContext = request.app.state.ctx
+        return ctx.workqueue
+
+
 server_context = APIServerContext()
 s3tests_mgr = APIS3TestsMgr()
 bench_mgr = APIBenchMgr()
+workqueue = APIWorkQueue()

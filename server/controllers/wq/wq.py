@@ -9,15 +9,18 @@ import abc
 import asyncio
 import copy
 import logging
-
 from collections import deque
 from datetime import datetime as dt
-from enum import Enum
 from typing import Awaitable, Callable, List, Optional
 from uuid import UUID, uuid4
 
-from controllers.wq.types import WQItemProgressType
 from controllers.wq.progress import WQItemProgress
+from controllers.wq.types import (
+    WorkQueueStatus,
+    WorkQueueStatusItem,
+    WQItemKind,
+    WQItemProgressType,
+)
 
 
 class WQItem(abc.ABC):
@@ -40,6 +43,14 @@ class WQItem(abc.ABC):
     @property
     def uuid(self) -> UUID:
         return self._uuid
+
+    @property
+    def time_start(self) -> Optional[dt]:
+        return self._time_start
+
+    @property
+    def time_end(self) -> Optional[dt]:
+        return self._time_end
 
     @property
     def duration(self) -> int:
@@ -100,12 +111,6 @@ class WQItem(abc.ABC):
     @abc.abstractmethod
     def _progress(self) -> Optional[WQItemProgressType]:
         pass
-
-
-class WQItemKind(Enum):
-    NONE = 0
-    BENCH = 1
-    S3TESTS = 2
 
 
 WQItemFinishCB = Callable[[WQItem], Awaitable[None]]
@@ -245,3 +250,33 @@ class WorkQueue:
             if self._running is not None:
                 ret = copy.deepcopy(self._running)
         return ret
+
+    async def status(self) -> WorkQueueStatus:
+        waiting: List[WorkQueueStatusItem] = []
+        finished: List[WorkQueueStatusItem] = []
+        current: Optional[WorkQueueStatusItem] = None
+
+        def _convert(entry: WQEntry) -> WorkQueueStatusItem:
+            return WorkQueueStatusItem(
+                uuid=entry.item.uuid,
+                kind=entry.kind,
+                is_running=entry.item.is_running(),
+                is_done=entry.item.is_done(),
+                time_start=entry.item.time_start,
+                time_end=entry.item.time_end,
+                duration=entry.item.duration,
+            )
+
+        async with self._lock:
+            for entry in self._waiting:
+                waiting.append(_convert(entry))
+
+            for entry in self._finished:
+                finished.append(_convert(entry))
+
+            if self._running is not None:
+                current = _convert(self._running)
+
+        return WorkQueueStatus(
+            waiting=waiting, finished=finished, current=current
+        )
