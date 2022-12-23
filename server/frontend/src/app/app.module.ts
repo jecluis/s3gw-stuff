@@ -7,6 +7,7 @@ import { AppComponent } from "~/app/app.component";
 import { PagesModule } from "~/app/pages/pages.module";
 import { SharedModule } from "~/app/shared/shared.module";
 import { MainComponent } from "./main/main.component";
+import { NgbOffcanvasModule } from "@ng-bootstrap/ng-bootstrap";
 
 @NgModule({
   declarations: [AppComponent, MainComponent],
@@ -16,6 +17,7 @@ import { MainComponent } from "./main/main.component";
     HttpClientModule,
     PagesModule,
     SharedModule,
+    NgbOffcanvasModule,
   ],
   providers: [],
   bootstrap: [AppComponent],

@@ -12,7 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, TemplateRef } from "@angular/core";
+import { NgbOffcanvas } from "@ng-bootstrap/ng-bootstrap";
 
 @Component({
   selector: "s3gw-main",
@@ -20,9 +21,13 @@ import { Component, OnInit } from "@angular/core";
   styleUrls: ["./main.component.scss"],
 })
 export class MainComponent implements OnInit {
-  public constructor() {}
+  public constructor(private offcanvasSvc: NgbOffcanvas) {}
 
   public ngOnInit(): void {
     return;
+  }
+
+  public openWorkQueue(content: TemplateRef<any>) {
+    this.offcanvasSvc.open(content, { position: "end" });
   }
 }
