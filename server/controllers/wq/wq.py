@@ -57,7 +57,7 @@ class WQItem(abc.ABC):
         if self._time_start is None:
             return 0
         end = self._time_end if self._time_end is not None else dt.now()
-        return (self._time_start - end).seconds
+        return (end - self._time_start).seconds
 
     @property
     def progress(self) -> WQItemProgress:
