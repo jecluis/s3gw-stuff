@@ -15,9 +15,14 @@ from typing import Awaitable, Callable, List, Optional
 from uuid import UUID, uuid4
 
 from controllers.wq.progress import WQItemProgress
-from controllers.wq.types import (
+from controllers.wq.status import (
+    WorkQueueState,
     WorkQueueStatus,
+    WorkQueueStatusEntry,
     WorkQueueStatusItem,
+)
+from controllers.wq.types import (
+    WQItemConfigType,
     WQItemKind,
     WQItemProgressType,
 )
@@ -110,6 +115,11 @@ class WQItem(abc.ABC):
     @property
     @abc.abstractmethod
     def _progress(self) -> Optional[WQItemProgressType]:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def config(self) -> WQItemConfigType:
         pass
 
 
@@ -248,35 +258,50 @@ class WorkQueue:
         ret: Optional[WQEntry] = None
         async with self._lock:
             if self._running is not None:
-                ret = copy.deepcopy(self._running)
+                ret = copy.copy(self._running)
         return ret
 
-    async def status(self) -> WorkQueueStatus:
+    def _convert_to_status_item(self, entry: WQEntry) -> WorkQueueStatusItem:
+        return WorkQueueStatusItem(
+            uuid=entry.item.uuid,
+            kind=entry.kind,
+            is_running=entry.item.is_running(),
+            is_done=entry.item.is_done(),
+            time_start=entry.item.time_start,
+            time_end=entry.item.time_end,
+            duration=entry.item.duration,
+        )
+
+    async def state(self) -> WorkQueueState:
         waiting: List[WorkQueueStatusItem] = []
         finished: List[WorkQueueStatusItem] = []
         current: Optional[WorkQueueStatusItem] = None
 
-        def _convert(entry: WQEntry) -> WorkQueueStatusItem:
-            return WorkQueueStatusItem(
-                uuid=entry.item.uuid,
-                kind=entry.kind,
-                is_running=entry.item.is_running(),
-                is_done=entry.item.is_done(),
-                time_start=entry.item.time_start,
-                time_end=entry.item.time_end,
-                duration=entry.item.duration,
-            )
-
         async with self._lock:
             for entry in self._waiting:
-                waiting.append(_convert(entry))
+                waiting.append(self._convert_to_status_item(entry))
 
             for entry in self._finished:
-                finished.append(_convert(entry))
+                finished.append(self._convert_to_status_item(entry))
 
             if self._running is not None:
-                current = _convert(self._running)
+                current = self._convert_to_status_item(self._running)
+
+        return WorkQueueState(
+            waiting=waiting, finished=finished, current=current
+        )
+
+    async def status(self) -> WorkQueueStatus:
+        current: Optional[WQEntry] = await self.running()
+
+        if current is None:
+            return WorkQueueStatus(is_running=False, current=None)
 
         return WorkQueueStatus(
-            waiting=waiting, finished=finished, current=current
+            is_running=True,
+            current=WorkQueueStatusEntry(
+                item=self._convert_to_status_item(current),
+                progress=current.item.progress,
+                config=current.item.config,
+            ),
         )

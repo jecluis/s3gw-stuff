@@ -6,7 +6,7 @@
 # your option) any later version.
 
 from api import workqueue
-from controllers.wq.types import WorkQueueStatus
+from controllers.wq.status import WorkQueueState, WorkQueueStatus
 from controllers.wq.wq import WorkQueue
 from fastapi import Depends, Request
 from fastapi.routing import APIRouter
@@ -16,6 +16,10 @@ router: APIRouter = APIRouter(prefix="/workqueue", tags=["workqueue"])
 
 
 class WorkQueueGetReply(BaseModel):
+    status: WorkQueueState
+
+
+class WorkQueueGetStatusReply(BaseModel):
     status: WorkQueueStatus
 
 
@@ -23,4 +27,11 @@ class WorkQueueGetReply(BaseModel):
 async def get_workqueue(
     request: Request, wq: WorkQueue = Depends(workqueue)
 ) -> WorkQueueGetReply:
-    return WorkQueueGetReply(status=await wq.status())
+    return WorkQueueGetReply(status=await wq.state())
+
+
+@router.get("/status", response_model=WorkQueueGetStatusReply)
+async def get_workqueue_status(
+    request: Request, wq: WorkQueue = Depends(workqueue)
+) -> WorkQueueGetStatusReply:
+    return WorkQueueGetStatusReply(status=await wq.status())

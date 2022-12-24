@@ -5,37 +5,26 @@
 # the Free Software Foundation, either version 3 of the License, or (at
 # your option) any later version.
 
-from datetime import datetime as dt
 from enum import Enum
-from typing import List, Optional, Union
-from uuid import UUID
+from typing import Union
 
 from controllers.bench.progress import BenchTargetsProgress
 from controllers.s3tests.progress import S3TestRunProgress
 from pydantic import BaseModel
+
+from controllers.bench.config import BenchConfigDesc
+from controllers.s3tests.config import S3TestsConfigEntry
 
 
 class WQItemProgressType(BaseModel):
     __root__: Union[BenchTargetsProgress, S3TestRunProgress]
 
 
+class WQItemConfigType(BaseModel):
+    __root__: Union[BenchConfigDesc, S3TestsConfigEntry]
+
+
 class WQItemKind(Enum):
     NONE = 0
     BENCH = 1
     S3TESTS = 2
-
-
-class WorkQueueStatusItem(BaseModel):
-    uuid: UUID
-    kind: WQItemKind
-    is_running: bool
-    is_done: bool
-    time_start: Optional[dt]
-    time_end: Optional[dt]
-    duration: int
-
-
-class WorkQueueStatus(BaseModel):
-    waiting: List[WorkQueueStatusItem]
-    finished: List[WorkQueueStatusItem]
-    current: Optional[WorkQueueStatusItem]

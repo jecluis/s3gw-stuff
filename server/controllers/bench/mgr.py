@@ -6,16 +6,27 @@
 # your option) any later version.
 
 import asyncio
-from datetime import datetime as dt
 import logging
 import random
 import shutil
+from datetime import datetime as dt
 from typing import Dict, List, Optional, cast
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from common.error import NoSuchConfigError
+from controllers.bench.config import BenchConfigDesc, BenchTarget
+from controllers.bench.progress import BenchTargetsProgress, TargetProgress
+from controllers.bench.results import ResultItem, Results
+from controllers.bench.types import (
+    BenchConfig,
+    BenchDBNS,
+    BenchProgress,
+    BenchResult,
+    BenchTargetError,
+)
+from controllers.wq.types import WQItemConfigType, WQItemProgressType
+from controllers.wq.wq import WorkQueue, WQItem, WQItemCB, WQItemKind
 from libstuff.bench.plots import Histogram
-
 from libstuff.bench.runner import (
     BenchmarkPorts,
     BenchmarkRunner,
@@ -23,25 +34,7 @@ from libstuff.bench.runner import (
 )
 from libstuff.bench.warp import WarpBenchmarkState
 from libstuff.dbm import DBM
-from common.error import NoSuchConfigError
-from controllers.bench.progress import BenchTargetsProgress, TargetProgress
-from controllers.bench.types import (
-    BenchConfig,
-    BenchConfigDesc,
-    BenchDBNS,
-    BenchProgress,
-    BenchResult,
-    BenchTarget,
-    BenchTargetError,
-)
-from controllers.bench.results import ResultItem, Results
-from controllers.wq.wq import (
-    WQItem,
-    WQItemCB,
-    WQItemKind,
-    WorkQueue,
-)
-from controllers.wq.types import WQItemProgressType
+from pydantic import BaseModel
 
 
 def _gen_random_host_port() -> int:
@@ -173,8 +166,8 @@ class WorkItem(WQItem):
         )
 
     @property
-    def config(self) -> BenchConfig:
-        return self._config
+    def config(self) -> WQItemConfigType:
+        return cast(WQItemConfigType, self._config)
 
 
 class BenchmarkMgr:
@@ -316,7 +309,7 @@ class BenchmarkMgr:
                 return None
 
             return BenchRunDesc(
-                config=self._current.config,
+                config=cast(BenchConfig, self._current.config),
                 progress=self._current.progress,
             )
 

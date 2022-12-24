@@ -6,37 +6,33 @@
 # your option) any later version.
 
 import asyncio
-from datetime import datetime as dt
-from pathlib import Path
 import logging
 import random
 import string
+from datetime import datetime as dt
+from pathlib import Path
 from typing import Dict, List, Optional, cast
 from uuid import UUID, uuid4
 
-from controllers.s3tests.config import (
-    S3TestsConfigDesc,
-    S3TestsConfigEntry,
-)
+from common.error import NoSuchConfigError, NoSuchRunError, ServerError
+from controllers.s3tests.config import S3TestsConfigDesc, S3TestsConfigEntry
+from controllers.s3tests.progress import S3TestRunProgress
+from controllers.wq.progress import WQItemProgress, WQItemProgressType
+from controllers.wq.types import WQItemConfigType
+from controllers.wq.wq import WorkQueue, WQItem, WQItemCB, WQItemKind
 from fastapi.logger import logger
 from libstuff import git
-from common.error import NoSuchConfigError, NoSuchRunError, ServerError
 from libstuff.dbm import DBM
 from libstuff.s3tests.runner import (
     CollectedTests,
     ContainerRunConfig,
     ErrorTestResult,
-    S3TestsRunner,
-    S3TestsError,
     RunnerError,
+    S3TestsError,
+    S3TestsRunner,
     TestRunResult,
 )
 from pydantic import BaseModel
-
-from controllers.s3tests.progress import S3TestRunProgress
-from controllers.wq.wq import WorkQueue, WQItem, WQItemCB, WQItemKind
-from controllers.wq.progress import WQItemProgressType, WQItemProgress
-
 
 S3TestsProgress = WQItemProgress
 
@@ -177,7 +173,11 @@ class WorkItem(WQItem):
         )
 
     @property
-    def config(self) -> UUID:
+    def config(self) -> WQItemConfigType:
+        return cast(WQItemConfigType, self._config)
+
+    @property
+    def config_uuid(self) -> UUID:
         return self._config.uuid
 
     def is_running(self) -> bool:
@@ -317,7 +317,7 @@ class S3TestsMgr:
             await self._db.put(ns=self.NS_TESTS_ERRORS, key=key, value=entry)
 
         # store association between config and the results
-        config_uuid = item.config
+        config_uuid = item.config_uuid
         k = f"{config_uuid}/{uuid}"
 
         resdict: Dict[str, int] = {"ok": 0, "error": 0, "fail": 0}

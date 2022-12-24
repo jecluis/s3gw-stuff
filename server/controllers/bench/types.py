@@ -5,32 +5,12 @@
 # the Free Software Foundation, either version 3 of the License, or (at
 # your option) any later version.
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 from uuid import UUID
 
-from pydantic import BaseModel
-from libstuff.bench.runner import BenchmarkParams
+from controllers.bench.config import BenchConfig
 from controllers.wq.progress import WQItemProgress
-
-
-class BenchTarget(BaseModel):
-    image: str
-    args: Optional[str]
-    port: int
-    access_key: str
-    secret_key: str
-
-
-class BenchConfig(BaseModel):
-    name: str
-    params: BenchmarkParams
-    targets: Dict[str, BenchTarget]
-
-
-class BenchConfigDesc(BaseModel):
-    uuid: UUID
-    config: BenchConfig
-
+from pydantic import BaseModel
 
 BenchProgress = WQItemProgress
 
