@@ -6,11 +6,18 @@ import { AppRoutingModule } from "~/app/app-routing.module";
 import { AppComponent } from "~/app/app.component";
 import { PagesModule } from "~/app/pages/pages.module";
 import { SharedModule } from "~/app/shared/shared.module";
-import { MainComponent } from "./main/main.component";
+import { MainComponent } from "~/app/main/main.component";
 import { NgbOffcanvasModule } from "@ng-bootstrap/ng-bootstrap";
+import { WorkQueueSidebarComponent } from "~/app/main/workqueue-sidebar/workqueue-sidebar.component";
+import { WorkQueueSidebarItemComponent } from "~/app/main/workqueue-sidebar/workqueue-sidebar-item/workqueue-sidebar-item.component";
 
 @NgModule({
-  declarations: [AppComponent, MainComponent],
+  declarations: [
+    AppComponent,
+    MainComponent,
+    WorkQueueSidebarComponent,
+    WorkQueueSidebarItemComponent,
+  ],
   imports: [
     BrowserModule,
     AppRoutingModule,

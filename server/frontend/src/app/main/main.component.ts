@@ -28,6 +28,9 @@ export class MainComponent implements OnInit {
   }
 
   public openWorkQueue(content: TemplateRef<any>) {
-    this.offcanvasSvc.open(content, { position: "end" });
+    this.offcanvasSvc.open(content, {
+      position: "end",
+      panelClass: "offcanvas-wq",
+    });
   }
 }

@@ -50,7 +50,10 @@ limitations under the License.
         </li>
       </ul>
       <div class="d-flex">
-        <button class="btn btn-primary" (click)="openWorkQueue(wqcontent)">
+        <button
+          class="btn btn-sm btn-outline-warning"
+          (click)="openWorkQueue(wqcontent)"
+        >
           Work Queue
         </button>
       </div>
@@ -62,8 +65,8 @@ limitations under the License.
   <router-outlet></router-outlet>
 </div>
 
-<ng-template #wqcontent let-offcanvas>
-  <div class="offcanvas-header">
+<ng-template #wqcontent let-offcanvas ngClass="offcanvas-wq">
+  <div class="offcanvas-header shadow-sm">
     <h4 class="offcanvas-title">Work Queue</h4>
     <button
       type="button"
@@ -73,7 +76,6 @@ limitations under the License.
     ></button>
   </div>
   <div class="offcanvas-body">
-    <div class="card">Item 1</div>
-    <div class="card">Item 2</div>
+    <s3gw-workqueue-sidebar></s3gw-workqueue-sidebar>
   </div>
 </ng-template>
