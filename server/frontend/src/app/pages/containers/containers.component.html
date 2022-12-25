@@ -14,19 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <div class="container-fluid">
-
-  <div class="row border-bottom border-3" style="height: 70px">
-    <div class="col-12">
-      <div class="d-flex flex-row align-items-center h-100 px-2">
-        <h5 class="fw-bold text-uppercase">containers</h5>
-      </div>
-    </div>
-  </div>
-
   <div class="row justify-content-center">
     <div class="col-12 col-xxl-6">
       <div class="p-5">
-
         <!-- "running" card here -->
         <div class="card">
           <div class="card-body">
@@ -44,28 +34,24 @@ limitations under the License.
               <tbody class="table-group-divider">
                 <ng-container *ngFor="let entry of running">
                   <tr>
-                    <td scope="row">{{entry.name}}</td>
+                    <td scope="row">{{ entry.name }}</td>
                     <td scope="row">
-                      {{entry.image}}
+                      {{ entry.image }}
                     </td>
-                    <td scope="row">{{entry.startedAt}}</td>
+                    <td scope="row">{{ entry.startedAt }}</td>
                   </tr>
                 </ng-container>
               </tbody>
             </table>
           </div>
-
-
         </div>
-
       </div>
     </div>
   </div>
 
-  <div class="row justify-concent-center">
+  <div class="row justify-content-center">
     <div class="col-12 col-xxl-6">
       <div class="p-5">
-
         <!-- "stopped" card here -->
         <div class="card">
           <div class="card-body">
@@ -83,11 +69,11 @@ limitations under the License.
               <tbody class="table-group-divider">
                 <ng-container *ngFor="let entry of stopped">
                   <tr (click)="toggleEntry(entry)">
-                    <td scope="row">{{entry.name}}</td>
+                    <td scope="row">{{ entry.name }}</td>
                     <td scope="row">
-                      {{entry.image}}
+                      {{ entry.image }}
                     </td>
-                    <td scope="row">{{entry.state}}</td>
+                    <td scope="row">{{ entry.state }}</td>
                   </tr>
                   <ng-container *ngIf="!entry.info.isCollapsed">
                     <tr>
@@ -95,16 +81,24 @@ limitations under the License.
                         <div class="card">
                           <div class="card-header fw-bold">Logs</div>
                           <div class="card-body">
-                            <div class="text-info"
-                                 *ngIf="entry.info.obtainingLogs">
+                            <div
+                              class="text-info"
+                              *ngIf="entry.info.obtainingLogs"
+                            >
                               Loading...
                             </div>
-                            <div class="text-danger"
-                                 *ngIf="!entry.info.obtainingLogs && entry.info.errorObtainingLogs">
+                            <div
+                              class="text-danger"
+                              *ngIf="
+                                !entry.info.obtainingLogs &&
+                                entry.info.errorObtainingLogs
+                              "
+                            >
                               Error obtaining logs.
                             </div>
-                            <pre
-                                 *ngIf="entry.info.hasLogs">{{logs[entry.id]}}</pre>
+                            <pre *ngIf="entry.info.hasLogs">{{
+                              logs[entry.id]
+                            }}</pre>
                           </div>
                         </div>
                       </td>
@@ -114,10 +108,8 @@ limitations under the License.
               </tbody>
             </table>
           </div>
-
-
         </div>
       </div>
     </div>
-
   </div>
+</div>
