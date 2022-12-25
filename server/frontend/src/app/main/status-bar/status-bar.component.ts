@@ -190,11 +190,17 @@ export class StatusBarComponent implements OnInit, OnDestroy {
       isS3Tests: true,
     };
 
-    const s3testsProgress = progress.progress as S3TestsProgress;
-    const done = s3testsProgress.tests_run;
-    const total = s3testsProgress.tests_total;
-    const percent =
-      Math.round(((done * 100) / total + Number.EPSILON) * 100) / 100;
+    console.debug("s3tests update progress: ", progress);
+    let done = 0;
+    let total = 0;
+    let percent = 0;
+
+    if (!!progress.progress) {
+      const s3testsProgress = progress.progress as S3TestsProgress;
+      done = s3testsProgress.tests_run;
+      total = s3testsProgress.tests_total;
+      percent = Math.round(((done * 100) / total + Number.EPSILON) * 100) / 100;
+    }
     this.s3testsProgress = {
       duration: this.durationToStr(progress.duration),
       done: done,

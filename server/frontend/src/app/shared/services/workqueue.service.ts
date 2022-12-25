@@ -62,7 +62,7 @@ export type WorkQueueProgress = {
   time_start: string;
   time_end: string;
   duration: number;
-  progress: BenchProgress | S3TestsProgress;
+  progress?: BenchProgress | S3TestsProgress;
 };
 
 export type WorkQueueStatusEntry = {
