@@ -30,8 +30,6 @@ export class BenchConfigViewComponent implements OnInit, OnDestroy {
   public config!: BenchConfigEntry;
 
   public yamlConfig: string = "";
-  public isBusy: boolean = false;
-  public canRun: boolean = false;
   public failedToRun: boolean = false;
   public isPreparingToRun: boolean = false;
 
@@ -56,10 +54,6 @@ export class BenchConfigViewComponent implements OnInit, OnDestroy {
 
   public runConfig(): void {
     console.debug("run config: ", this.config.uuid);
-    if (this.isBusy || !this.canRun) {
-      console.debug("can't run: ", this.isBusy, this.canRun);
-      return;
-    }
 
     this.failedToRun = false;
     this.isPreparingToRun = true;

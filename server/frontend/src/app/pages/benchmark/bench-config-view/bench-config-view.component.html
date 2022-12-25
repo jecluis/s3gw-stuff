@@ -14,20 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <div class="card border border-info border-2">
-
-  <div class="bg-opacity-10 border-bottom border-info border-1"
-       style="height: 70px" [ngClass]="{
-        'bg-info': !isBusy && canRun,
-        'bg-danger': failedToRun,
-        'bg-warning': isBusy
-       }">
+  <div
+    class="bg-opacity-10 border-bottom border-info border-1"
+    style="height: 70px"
+    [ngClass]="{
+      'bg-info': !isPreparingToRun,
+      'bg-danger': failedToRun,
+      'bg-warning': isPreparingToRun
+    }"
+  >
     <div class="d-flex flex-row align-items-center h-100 px-2">
-      <button type="button" class="btn btn-success" [disabled]="isBusy"
-              *ngIf="!isPreparingToRun" (click)="runConfig()">
+      <button
+        type="button"
+        class="btn btn-success"
+        [disabled]="isPreparingToRun"
+        *ngIf="!isPreparingToRun"
+        (click)="runConfig()"
+      >
         Run
       </button>
-      <button type="button" class="btn btn-warning" disabled
-              *ngIf="isPreparingToRun">
+      <button
+        type="button"
+        class="btn btn-warning"
+        disabled
+        *ngIf="isPreparingToRun"
+      >
         Preparing
       </button>
       <span class="px-3 fw-bold" *ngIf="failedToRun">
