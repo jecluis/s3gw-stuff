@@ -61,12 +61,16 @@ export type BenchTargetProgress = {
 };
 
 export type BenchProgress = {
+  targets: BenchTargetProgress[];
+};
+
+export type BenchProgressEntry = {
   is_running: boolean;
   is_done: boolean;
   time_start?: string;
   time_end?: string;
   duration: number;
-  targets: BenchTargetProgress[];
+  progress: BenchProgress;
 };
 
 export type BenchResultTargetItem = {
@@ -76,7 +80,7 @@ export type BenchResultTargetItem = {
 
 export type BenchResult = {
   uuid: string;
-  progress: BenchProgress;
+  progress: BenchProgressEntry;
   is_error: boolean;
   errors: BenchTargetError[];
   config: BenchConfig;
@@ -86,7 +90,7 @@ export type BenchResult = {
 export type BenchResultMap = { [id: string]: BenchResult };
 
 export type BenchRunDesc = {
-  config: BenchConfig;
+  config: BenchConfigEntry;
   progress: BenchProgress;
 };
 
@@ -125,7 +129,7 @@ type BenchPostRunAPIResult = {
 
 export type BenchGetStatusAPIResult = {
   date: string;
-  running: boolean;
+  available: boolean;
   busy: boolean;
   current?: BenchRunDesc;
 };

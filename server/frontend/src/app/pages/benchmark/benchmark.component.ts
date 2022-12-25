@@ -13,15 +13,6 @@
  * limitations under the License.
  */
 import { Component, OnDestroy, OnInit } from "@angular/core";
-import { Subscription } from "rxjs";
-import {
-  BenchRunDesc,
-  BenchTargetProgress,
-} from "~/app/shared/services/api/bench-api.service";
-import {
-  BenchStatus,
-  StatusService,
-} from "~/app/shared/services/status.service";
 
 type Progress = {
   target: string;
@@ -38,73 +29,13 @@ type Progress = {
   styleUrls: ["./benchmark.component.scss"],
 })
 export class BenchmarkComponent implements OnInit, OnDestroy {
-  public isBusy: boolean = false;
-  public isBenchBusy: boolean = false;
-  public isBenchAvailable: boolean = false;
-  public currentRun?: BenchRunDesc;
-  public currentProgress?: Progress;
-
-  private busySubscription?: Subscription;
-  private statusSubscription?: Subscription;
-
-  public constructor(private statusSvc: StatusService) {}
+  public constructor() {}
 
   public ngOnInit(): void {
-    this.busySubscription = this.statusSvc.busy.subscribe({
-      next: (v: boolean) => {
-        this.isBusy = v;
-      },
-    });
-    this.statusSubscription = this.statusSvc.bench.subscribe({
-      next: (s: BenchStatus) => {
-        if (!s) {
-          return;
-        }
-        this.isBenchBusy = s.busy;
-        this.isBenchAvailable = s.running;
-        this.currentRun = s.item;
-        if (!this.isBenchBusy) {
-          return;
-        }
-        console.assert(!!this.currentRun);
-        console.assert(!!this.currentRun!.progress);
-        const p = this.currentRun!.progress;
-        let doneTargets: number = 0;
-        let currTarget: BenchTargetProgress | undefined = undefined;
-        p.targets.forEach((target: BenchTargetProgress) => {
-          if (target.is_done) {
-            doneTargets++;
-          } else if (target.is_running) {
-            currTarget = target;
-          } else {
-            console.error("unknown target state: ", target);
-          }
-        });
-        console.assert(!!currTarget);
-        console.assert(!!currTarget);
-        let state: string = "unknown";
-        if (currTarget!.state === 0) {
-          state = "starting";
-        } else if (currTarget!.state === 1) {
-          state = "preparing";
-        } else if (currTarget!.state === 2) {
-          state = "running";
-        }
-        console.log("current target: ", currTarget);
-        this.currentProgress = {
-          duration: p.duration,
-          target: currTarget!.name,
-          targetNum: doneTargets + 1,
-          totalTargets: p.targets.length,
-          progress: currTarget!.value,
-          state: state,
-        };
-      },
-    });
+    return;
   }
 
   public ngOnDestroy(): void {
-    this.busySubscription?.unsubscribe();
-    this.statusSubscription?.unsubscribe();
+    return;
   }
 }

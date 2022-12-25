@@ -3,7 +3,7 @@ import { finalize, Subscription, take, timer } from "rxjs";
 import {
   WorkQueueEntry,
   WorkQueueService,
-  WorkQueueStatus,
+  WorkQueueState,
 } from "~/app/shared/services/workqueue.service";
 
 @Component({
@@ -46,12 +46,12 @@ export class WorkQueueSidebarComponent implements OnInit, OnDestroy {
             });
         }),
       )
-      .subscribe((status: WorkQueueStatus) => {
+      .subscribe((status: WorkQueueState) => {
         this.updateStatus(status);
       });
   }
 
-  private updateStatus(status: WorkQueueStatus): void {
+  private updateStatus(status: WorkQueueState): void {
     this.current = status.current;
     this.waiting = status.waiting;
     this.hasCurrent = !!this.current;

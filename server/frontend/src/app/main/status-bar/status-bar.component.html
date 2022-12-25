@@ -1,0 +1,74 @@
+<!--
+Copyright 2022 SUSE, LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<div class="container-fluid">
+  <div class="row border-bottom border-3" style="height: 70px">
+    <div class="col-12">
+      <div class="d-flex flex-row align-items-center h-100 px-2">
+        <h5 class="fw-bold text-uppercase">{{ currentRoute }}</h5>
+
+        <div class="ps-3">
+          <h5 class="text-success" *ngIf="!isBusy">
+            <i class="mdi mdi-server me-1"></i>
+            AVAILABLE
+          </h5>
+          <h5 class="text-info" *ngIf="isBusy">
+            <i class="mdi mdi-run-fast me-1"></i>
+            <span>RUNNING</span>
+          </h5>
+        </div>
+
+        <div
+          class="ps-3 d-flex flex-row align-items-center h-100"
+          *ngIf="isBusy"
+        >
+          <div class="ps-3" style="margin-bottom: 0.5rem">
+            <span class="fw-bold">{{ details?.kind }}</span>
+            <span class="ps-1 fst-italic">
+              {{ details?.name }}
+            </span>
+          </div>
+
+          <ng-container *ngIf="details?.isBench">
+            <div class="ps-3" style="margin-bottom: 0.5rem">
+              <span>
+                {{ benchProgress?.targetNum }} of
+                {{ benchProgress?.totalTargets }}
+              </span>
+              <span class="ps-3">
+                {{ benchProgress?.target }}
+              </span>
+              <span class="ps-3">
+                {{ benchProgress?.state }}: {{ benchProgress?.progress }}%
+              </span>
+              <span class="ps-3 fst-italic">
+                {{ benchProgress?.duration }}
+              </span>
+            </div>
+          </ng-container>
+
+          <ng-container *ngIf="details?.isS3Tests">
+            <div class="ps-3" style="margin-bottom: 0.5rem">
+              <span>
+                {{ s3testsProgress?.done }} of {{ s3testsProgress?.total }}
+              </span>
+              <span class="ps-3"> {{ s3testsProgress?.progress }}% </span>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -10,6 +10,7 @@ import { MainComponent } from "~/app/main/main.component";
 import { NgbOffcanvasModule } from "@ng-bootstrap/ng-bootstrap";
 import { WorkQueueSidebarComponent } from "~/app/main/workqueue-sidebar/workqueue-sidebar.component";
 import { WorkQueueSidebarItemComponent } from "~/app/main/workqueue-sidebar/workqueue-sidebar-item/workqueue-sidebar-item.component";
+import { StatusBarComponent } from './main/status-bar/status-bar.component';
 
 @NgModule({
   declarations: [
@@ -17,6 +18,7 @@ import { WorkQueueSidebarItemComponent } from "~/app/main/workqueue-sidebar/work
     MainComponent,
     WorkQueueSidebarComponent,
     WorkQueueSidebarItemComponent,
+    StatusBarComponent,
   ],
   imports: [
     BrowserModule,

@@ -50,7 +50,7 @@ class BenchRunDesc(BaseModel):
 
 class WorkItem(WQItem):
     _runner: BenchmarkRunner
-    _config: BenchConfig
+    _config: BenchConfigDesc
 
     _progress_by_target: Dict[str, TargetProgress]
     _results: Dict[str, str]
@@ -58,7 +58,7 @@ class WorkItem(WQItem):
     def __init__(
         self,
         runner: BenchmarkRunner,
-        config: BenchConfig,
+        config: BenchConfigDesc,
         logger: logging.Logger,
     ) -> None:
         super().__init__(logger)
@@ -69,7 +69,7 @@ class WorkItem(WQItem):
 
     async def _run(self) -> None:
 
-        for target in self._config.targets.keys():
+        for target in self._config.config.targets.keys():
             self._progress_by_target[target] = TargetProgress(
                 name=target,
                 state=WarpBenchmarkState.NONE,
@@ -84,7 +84,7 @@ class WorkItem(WQItem):
                 duration=0,
             )
 
-        for target, conf in self._config.targets.items():
+        for target, conf in self._config.config.targets.items():
             await self._run_target(target, conf)
 
         await asyncio.sleep(10)
@@ -161,7 +161,7 @@ class WorkItem(WQItem):
             progress=self.progress,
             is_error=(len(errors) > 0),
             errors=errors,
-            config=self._config,
+            config=self._config.config,
             results=self._results,
         )
 
@@ -187,7 +187,7 @@ class BenchmarkMgr:
     # _work_item: Optional[WorkItem]
     _current: Optional[WorkItem]
     _results: Results
-    _configs: Dict[UUID, BenchConfig]
+    _configs: Dict[UUID, BenchConfigDesc]
 
     logger: logging.Logger
 
@@ -257,10 +257,15 @@ class BenchmarkMgr:
             await self._results.add(res)
 
     async def _load_configs(self) -> None:
+
+        # tmp = await self._db.entries(ns=self.NS_CONFIG_BY_UUID)
+        # for res in tmp.keys():
+        #     await self._db.rm(ns=self.NS_CONFIG_BY_UUID, key=res)
+
         entries = cast(
-            Dict[str, BenchConfig],
+            Dict[str, BenchConfigDesc],
             await self._db.entries(
-                ns=self.NS_CONFIG_BY_UUID, model=BenchConfig
+                ns=self.NS_CONFIG_BY_UUID, model=BenchConfigDesc
             ),
         )
         for uuid, cfg in entries.items():
@@ -309,7 +314,7 @@ class BenchmarkMgr:
                 return None
 
             return BenchRunDesc(
-                config=cast(BenchConfig, self._current.config),
+                config=cast(BenchConfigDesc, self._current.config).config,
                 progress=self._current.progress,
             )
 
@@ -333,12 +338,13 @@ class BenchmarkMgr:
             self._current = _item
             self._is_busy = True
 
-    async def run(self, cfg: BenchConfig) -> UUID:
+    async def run(self, desc: BenchConfigDesc) -> UUID:
+        cfg: BenchConfig = desc.config
         date = dt.now().strftime("%Y%m%d-%H%M%S")
         run_name = f"benchmark-{date}"
 
         runner = BenchmarkRunner(run_name, cfg.params, self.logger)
-        item = WorkItem(runner, cfg, self.logger)
+        item = WorkItem(runner, desc, self.logger)
         cb: WQItemCB = WQItemCB(
             start=self._handle_started_item, finish=self._handle_finished_item
         )
@@ -355,26 +361,27 @@ class BenchmarkMgr:
                 return UUID(uuid_raw)
 
             uuid = uuid4()
-            tx.put(self.NS_CONFIG_BY_UUID, key=str(uuid), value=cfg)
+            desc = BenchConfigDesc(uuid=uuid, config=cfg)
+            tx.put(self.NS_CONFIG_BY_UUID, key=str(uuid), value=desc)
             tx.put(self.NS_CONFIG_BY_NAME, key=cfg.name, value=str(uuid))
 
-        await self._add_config(uuid, cfg)
+        await self._add_config(uuid, desc)
         return uuid
 
-    async def _add_config(self, uuid: UUID, cfg: BenchConfig) -> None:
+    async def _add_config(self, uuid: UUID, cfg: BenchConfigDesc) -> None:
         async with self._configs_lock:
             self._configs[uuid] = cfg
 
     async def config_list(self) -> List[BenchConfigDesc]:
         lst: List[BenchConfigDesc] = []
         async with self._configs_lock:
-            for uuid, cfg in self._configs.items():
-                lst.append(BenchConfigDesc(uuid=uuid, config=cfg))
+            for cfg in self._configs.values():
+                lst.append(cfg)
         return lst
 
     async def config_get(
         self, *, name: Optional[str] = None, uuid: Optional[UUID] = None
-    ) -> BenchConfig:
+    ) -> BenchConfigDesc:
 
         _uuid: Optional[UUID] = uuid
         if name is not None:

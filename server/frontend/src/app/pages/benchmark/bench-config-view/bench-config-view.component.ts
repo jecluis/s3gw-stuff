@@ -19,10 +19,6 @@ import {
   BenchAPIService,
   BenchConfigEntry,
 } from "~/app/shared/services/api/bench-api.service";
-import {
-  BenchStatus,
-  StatusService,
-} from "~/app/shared/services/status.service";
 
 @Component({
   selector: "s3gw-bench-config-view",
@@ -39,14 +35,9 @@ export class BenchConfigViewComponent implements OnInit, OnDestroy {
   public failedToRun: boolean = false;
   public isPreparingToRun: boolean = false;
 
-  private busySubscription?: Subscription;
-  private statusSubscription?: Subscription;
   private runSubscription?: Subscription;
 
-  public constructor(
-    private statusSvc: StatusService,
-    private benchSvc: BenchAPIService,
-  ) {}
+  public constructor(private benchSvc: BenchAPIService) {}
 
   public ngOnInit(): void {
     console.assert(!!this.config);
@@ -57,29 +48,16 @@ export class BenchConfigViewComponent implements OnInit, OnDestroy {
       forceQuotes: true,
       quotingType: '"',
     });
-
-    this.busySubscription = this.statusSvc.busy.subscribe((v: boolean) => {
-      this.isBusy = v;
-    });
-
-    this.statusSubscription = this.statusSvc.bench.subscribe({
-      next: (s: BenchStatus) => {
-        if (!s) {
-          return;
-        }
-        this.canRun = s.running;
-      },
-    });
   }
 
   public ngOnDestroy(): void {
-    this.busySubscription?.unsubscribe();
-    this.statusSubscription?.unsubscribe();
     this.runSubscription?.unsubscribe();
   }
 
   public runConfig(): void {
+    console.debug("run config: ", this.config.uuid);
     if (this.isBusy || !this.canRun) {
+      console.debug("can't run: ", this.isBusy, this.canRun);
       return;
     }
 

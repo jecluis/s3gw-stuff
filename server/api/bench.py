@@ -64,7 +64,7 @@ async def run_bench(
 ) -> BenchStartReply:
 
     try:
-        config: BenchConfig = await mgr.config_get(uuid=uuid)
+        config: BenchConfigDesc = await mgr.config_get(uuid=uuid)
     except NoSuchConfigError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 

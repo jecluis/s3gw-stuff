@@ -14,6 +14,7 @@
  */
 import { Injectable } from "@angular/core";
 import {
+  BehaviorSubject,
   catchError,
   EMPTY,
   finalize,
@@ -21,8 +22,11 @@ import {
   Observable,
   Subscription,
   take,
+  timer,
 } from "rxjs";
 import { ServerAPIService } from "~/app/shared/services/api/server-api.service";
+import { S3TestsConfigEntry } from "../types/s3tests.type";
+import { BenchConfigEntry, BenchProgress } from "./api/bench-api.service";
 
 export enum WorkQueueEntryKind {
   None = 0,
@@ -40,10 +44,40 @@ export type WorkQueueEntry = {
   duration: number;
 };
 
-export type WorkQueueStatus = {
+export type WorkQueueState = {
   waiting: WorkQueueEntry[];
   finished: WorkQueueEntry[];
   current?: WorkQueueEntry;
+};
+
+export type S3TestsProgress = {
+  tests_total: number;
+  tests_run: number;
+};
+
+export type WorkQueueProgress = {
+  uuid: string;
+  is_running: boolean;
+  is_done: boolean;
+  time_start: string;
+  time_end: string;
+  duration: number;
+  progress: BenchProgress | S3TestsProgress;
+};
+
+export type WorkQueueStatusEntry = {
+  item: WorkQueueEntry;
+  progress: WorkQueueProgress;
+  config: BenchConfigEntry | S3TestsConfigEntry;
+};
+
+export type WorkQueueStatus = {
+  is_running: boolean;
+  current?: WorkQueueStatusEntry;
+};
+
+type WorkQueueStateAPIResult = {
+  status: WorkQueueState;
 };
 
 type WorkQueueStatusAPIResult = {
@@ -54,16 +88,58 @@ type WorkQueueStatusAPIResult = {
   providedIn: "root",
 })
 export class WorkQueueService {
-  public constructor(private svc: ServerAPIService) {}
+  private statusSubject: BehaviorSubject<WorkQueueStatus> =
+    new BehaviorSubject<WorkQueueStatus>({ is_running: false });
 
-  public getWorkQueue(): Observable<WorkQueueStatus> {
-    return this.svc.get<WorkQueueStatusAPIResult>("/workqueue/").pipe(
+  private statusRefreshInterval: number = 1000;
+  private statusRefreshSubscription?: Subscription;
+  private statusSubscription?: Subscription;
+
+  public constructor(private svc: ServerAPIService) {
+    this.refreshStatus();
+  }
+
+  public getWorkQueue(): Observable<WorkQueueState> {
+    return this.svc.get<WorkQueueStateAPIResult>("/workqueue/").pipe(
       take(1),
       catchError((err) => {
         console.error("Error obtaining work queue: ", err);
         return EMPTY;
       }),
-      map((res: WorkQueueStatusAPIResult) => res.status),
+      map((res: WorkQueueStateAPIResult) => res.status),
     );
+  }
+
+  private refreshStatus(): void {
+    this.statusSubscription = this.svc
+      .get<WorkQueueStatusAPIResult>("/workqueue/status")
+      .pipe(
+        take(1),
+        catchError((err) => {
+          console.error("error obtaining workqueue status: ", err);
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.statusRefreshSubscription = timer(this.statusRefreshInterval)
+            .pipe(
+              take(1),
+              finalize(() => {
+                this.statusRefreshSubscription!.unsubscribe();
+              }),
+            )
+            .subscribe(() => {
+              this.statusSubscription!.unsubscribe();
+              this.refreshStatus();
+            });
+        }),
+        map((res: WorkQueueStatusAPIResult) => res.status),
+      )
+      .subscribe((status: WorkQueueStatus) => {
+        this.statusSubject.next(status);
+      });
+  }
+
+  public get status(): BehaviorSubject<WorkQueueStatus> {
+    return this.statusSubject;
   }
 }

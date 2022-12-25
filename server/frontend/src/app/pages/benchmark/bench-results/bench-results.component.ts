@@ -74,7 +74,7 @@ export class BenchResultsComponent implements OnInit {
       .subscribe((res: BenchResultMap) => {
         const lst: TableEntry[] = [];
         Object.values(res).forEach((value: BenchResult) => {
-          const targets = value.progress.targets.map(
+          const targets = value.progress.progress.targets.map(
             (target: BenchTargetProgress) => target.name,
           );
           lst.push({

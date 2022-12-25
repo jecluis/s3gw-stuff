@@ -34,7 +34,6 @@ import {
 } from "~/app/shared/types/s3tests.type";
 import { refreshRotateAnimation } from "~/app/shared/animations";
 import { ConfigsService } from "~/app/shared/services/configs.service";
-import { StatusService } from "~/app/shared/services/status.service";
 
 type S3TestsConfigTableEntry = {
   config: S3TestsConfigEntry;
@@ -83,11 +82,9 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
   };
 
   private configSubscription?: Subscription;
-  private busySubscription?: Subscription;
 
   public constructor(
     private svc: S3TestsAPIService,
-    private statusSvc: StatusService,
     private configsSvc: ConfigsService,
   ) {}
 
@@ -104,16 +101,10 @@ export class S3TestsConfigComponent implements OnInit, OnDestroy {
         });
       },
     });
-    this.busySubscription = this.statusSvc.busy.subscribe({
-      next: (s: boolean) => {
-        this.isRunning = s;
-      },
-    });
   }
 
   public ngOnDestroy(): void {
     this.configSubscription?.unsubscribe();
-    this.busySubscription?.unsubscribe();
   }
 
   public toggleNewConfig(): void {
